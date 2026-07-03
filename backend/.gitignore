@@ -1,0 +1,5 @@
+bin/
+obj/
+*.user
+.env
+src/SiloGuard.Api/appsettings.Development.json

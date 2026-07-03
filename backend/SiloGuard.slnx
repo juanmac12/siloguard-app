@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SiloGuard.Api/SiloGuard.Api.csproj" />
+    <Project Path="src/SiloGuard.Business/SiloGuard.Business.csproj" />
+    <Project Path="src/SiloGuard.Data/SiloGuard.Data.csproj" />
+  </Folder>
+</Solution>

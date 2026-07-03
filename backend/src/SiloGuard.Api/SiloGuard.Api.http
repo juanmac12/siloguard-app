@@ -1,0 +1,6 @@
+@SiloGuard.Api_HostAddress = http://localhost:5020
+
+GET {{SiloGuard.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
