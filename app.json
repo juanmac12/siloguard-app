@@ -5,15 +5,18 @@
     "scheme": "siloguard",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "dark",
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./src/assets/favicon.png"
+    },
+    "android": {
+      "softwareKeyboardLayoutMode": "pan"
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar"
+      "expo-secure-store"
     ]
   }
 }
