@@ -1,0 +1,52 @@
+/* SiloGuard — Typography tokens
+   Source: Figma › Foundations › Escala Tipográfica (node 135:57).
+   One family — Inter — across the whole product. Tight tracking on large
+   display/heading sizes; relaxed, legible body sizing for field use. */
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* ---- Weights ---- */
+  --fw-regular: 400;   /* @kind font */
+  --fw-medium: 500;    /* @kind font */
+  --fw-semibold: 600;  /* @kind font */
+  --fw-bold: 700;      /* @kind font */
+
+  /* ---- Type scale: size · weight · letter-spacing · line-height ---- */
+  /* Display · 48 · 700 · -1.5 · 58 */
+  --text-display: 48px;
+  --lh-display: 58px;
+  --ls-display: -1.5px;
+
+  /* H1 · 32 · 700 · -0.5 · 40 */
+  --text-h1: 32px;
+  --lh-h1: 40px;
+  --ls-h1: -0.5px;
+
+  /* H2 · 24 · 600 · -0.3 · 30 */
+  --text-h2: 24px;
+  --lh-h2: 30px;
+  --ls-h2: -0.3px;
+
+  /* H3 · 18 · 600 · 0 · 26 */
+  --text-h3: 18px;
+  --lh-h3: 26px;
+  --ls-h3: 0px;
+
+  /* Body · 14 · 400 · 0 · 22 */
+  --text-body: 14px;
+  --lh-body: 22px;
+  --ls-body: 0px;
+
+  /* Caption · 12 · 400 · 0.8 · 16 */
+  --text-caption: 12px;
+  --lh-caption: 16px;
+  --ls-caption: 0.8px;
+
+  /* Label · 12 · 700 · 0.3 — form field labels, used throughout the app */
+  --text-label: 12px;
+  --ls-label: 0.3px;
+
+  /* Overline · 11 · 700 · 1.5 — uppercase section eyebrows ("COLOR TOKENS") */
+  --text-overline: 11px;
+  --ls-overline: 1.5px;
+}

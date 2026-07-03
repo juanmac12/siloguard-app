@@ -1,0 +1,42 @@
+/* SiloGuard — Semantic aliases
+   Component-facing names mapped onto the base palette. Author components and
+   screens against THESE so a base-token change ripples everywhere. */
+:root {
+  /* Surfaces & lines */
+  --surface-app: var(--bg);
+  --surface-card: var(--surface);
+  --surface-input: var(--surface-2);
+  --surface-hover: var(--surface-3);
+  --border-default: var(--border);
+  --border-strong: #3A3A3A;
+
+  /* Text */
+  --text-primary: var(--text);
+  --text-secondary: var(--text-muted);
+  --text-link: var(--green);
+  --text-inverse: var(--text-on-green);
+
+  /* Brand / primary action */
+  --action-primary: var(--green);
+  --action-primary-hover: var(--green-600);
+  --action-primary-text: var(--text-on-green);
+
+  /* Status — grain health */
+  --status-ok: var(--green);
+  --status-ok-tint: var(--green-tint);
+  --status-warn: var(--amber);
+  --status-warn-tint: var(--amber-tint);
+  --status-critical: var(--danger);
+  --status-critical-tint: var(--danger-tint);
+  --status-info: var(--info);
+  --status-info-tint: var(--info-tint);
+
+  /* Focus */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--green);
+
+  /* Motion — calm, functional. No bounce; quick eases. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --dur-fast: 120ms;  /* @kind other */
+  --dur-base: 180ms;  /* @kind other */
+  --dur-slow: 280ms;  /* @kind other */
+}

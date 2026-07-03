@@ -1,0 +1,52 @@
+/* SiloGuard — Base layer
+   Minimal resets + the canonical type ramp as reusable classes. Screens and
+   cards opt into these; primitives style themselves with the tokens directly. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--surface-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- Type ramp ---- */
+.sg-display {
+  font-size: var(--text-display); line-height: var(--lh-display);
+  letter-spacing: var(--ls-display); font-weight: var(--fw-bold);
+}
+.sg-h1 {
+  font-size: var(--text-h1); line-height: var(--lh-h1);
+  letter-spacing: var(--ls-h1); font-weight: var(--fw-bold);
+}
+.sg-h2 {
+  font-size: var(--text-h2); line-height: var(--lh-h2);
+  letter-spacing: var(--ls-h2); font-weight: var(--fw-bold);
+}
+.sg-h3 {
+  font-size: var(--text-h3); line-height: var(--lh-h3);
+  letter-spacing: var(--ls-h3); font-weight: var(--fw-semibold);
+}
+.sg-body {
+  font-size: var(--text-body); line-height: var(--lh-body);
+  font-weight: var(--fw-regular);
+}
+.sg-caption {
+  font-size: var(--text-caption); line-height: var(--lh-caption);
+  letter-spacing: var(--ls-caption); font-weight: var(--fw-regular);
+  color: var(--text-secondary);
+}
+.sg-label {
+  font-size: var(--text-label); letter-spacing: var(--ls-label);
+  font-weight: var(--fw-bold); color: var(--text-secondary);
+}
+.sg-overline {
+  font-size: var(--text-overline); letter-spacing: var(--ls-overline);
+  font-weight: var(--fw-bold); text-transform: uppercase;
+  color: var(--text-secondary);
+}

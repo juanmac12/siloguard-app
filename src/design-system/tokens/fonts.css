@@ -1,0 +1,5 @@
+/* SiloGuard — Webfonts
+   Inter is the single typeface used across the entire product (Figma: 913 uses).
+   It is loaded from Google Fonts. Inter is the exact family in the source file,
+   so no substitution is needed. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
