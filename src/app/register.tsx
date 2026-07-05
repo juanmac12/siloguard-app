@@ -10,10 +10,25 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { auth } from "../config/firebase";
 import { ApiError } from "../config/api";
 import { useAppData } from "../contexts/AppDataContext";
 import { Colors, Spacing, FontSize } from "../constants/Theme";
 import { Button, Input } from "../components";
+
+function firebaseErrorMessage(code: string): string {
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "Ya existe una cuenta con ese email.";
+    case "auth/invalid-email":
+      return "El email no es válido.";
+    case "auth/weak-password":
+      return "La contraseña es muy débil. Usá al menos 8 caracteres.";
+    default:
+      return "Ocurrió un error. Intentá de nuevo.";
+  }
+}
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -48,17 +63,37 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      await register({
-        name: form.establecimiento.trim() || form.email.split("@")[0],
-        email: form.email.trim(),
-        password: form.password,
-        phone: form.telefono.trim() || undefined,
-        farmName: form.establecimiento.trim() || "Mi establecimiento",
-        farmLoc: form.localidad.trim() || undefined,
-      });
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        form.email.trim(),
+        form.password
+      );
+      await sendEmailVerification(credential.user);
+
+      try {
+        await register({
+          name: form.establecimiento.trim() || form.email.split("@")[0],
+          email: form.email.trim(),
+          password: form.password,
+          phone: form.telefono.trim() || undefined,
+          farmName: form.establecimiento.trim() || "Mi establecimiento",
+          farmLoc: form.localidad.trim() || undefined,
+        });
+      } catch (backendError) {
+        // La cuenta de Firebase ya se creó — si el backend falla (ej. email
+        // duplicado en la base propia) la deshacemos para poder reintentar.
+        await credential.user.delete().catch(() => {});
+        throw backendError;
+      }
+
       router.replace("/registro-exitoso");
-    } catch (error) {
-      const msg = error instanceof ApiError ? error.message : "Ocurrió un error. Intentá de nuevo.";
+    } catch (error: any) {
+      const msg =
+        error instanceof ApiError
+          ? error.message
+          : typeof error?.code === "string"
+            ? firebaseErrorMessage(error.code)
+            : "Ocurrió un error. Intentá de nuevo.";
       Alert.alert("Error", msg);
     } finally {
       setLoading(false);

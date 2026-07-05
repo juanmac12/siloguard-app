@@ -31,6 +31,13 @@ public class PerfilController : ControllerBase
         return Ok(Map(user));
     }
 
+    [HttpPut("password")]
+    public async Task<IActionResult> CambiarPassword([FromBody] CambiarPasswordRequest request, CancellationToken ct)
+    {
+        await _perfilService.CambiarPasswordAsync(User.GetUserId(), request, ct);
+        return NoContent();
+    }
+
     private static PerfilResponse Map(User u) => new()
     {
         Id = u.Id,

@@ -14,4 +14,10 @@ export const perfilApi = {
 
   update: (payload: PerfilUpdatePayload) =>
     apiFetch<PerfilResponse>("/perfil", { method: "PUT", body: JSON.stringify(payload) }),
+
+  cambiarPassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<void>("/perfil/password", {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };

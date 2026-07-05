@@ -16,7 +16,7 @@ export type IconName =
   | 'map-pin' | 'message-circle' | 'phone' | 'moon' | 'smartphone'
   | 'refresh-cw' | 'lock' | 'file-text' | 'camera'
   | 'trash' | 'edit' | 'more-vertical' | 'log-out' | 'shield'
-  | 'inbox' | 'cloud-off';
+  | 'inbox' | 'cloud-off' | 'search' | 'link';
 
 type Props = {
   name: IconName;
@@ -34,7 +34,7 @@ export const ICON_NAMES: IconName[] = [
   'map-pin', 'message-circle', 'phone', 'moon', 'smartphone',
   'refresh-cw', 'lock', 'file-text', 'camera',
   'trash', 'edit', 'more-vertical', 'log-out', 'shield',
-  'inbox', 'cloud-off',
+  'inbox', 'cloud-off', 'search', 'link',
 ];
 
 export function Icon({ name, size = 24, color = Colors.textPrimary, strokeWidth = 2 }: Props) {
@@ -273,6 +273,18 @@ export function Icon({ name, size = 24, color = Colors.textPrimary, strokeWidth 
         <Path d="m2 2 20 20" {...common} />
         <Path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" {...common} />
         <Path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" {...common} />
+      </>
+    ),
+    search: (
+      <>
+        <Circle cx="11" cy="11" r="7" {...common} />
+        <Line x1="21" x2="16.65" y1="21" y2="16.65" {...common} />
+      </>
+    ),
+    link: (
+      <>
+        <Path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5" {...common} />
+        <Path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5" {...common} />
       </>
     ),
   };

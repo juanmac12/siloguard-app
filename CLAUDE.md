@@ -172,14 +172,16 @@ Ver `src/design-system/SiloGuard_definicion_producto.md` para la descripción co
 
 ## Backend (.NET) — Estado de implementación
 
-> Backend completo y verificado end-to-end. El frontend ya lo consume (Firebase Auth fue
-> reemplazado por completo). Detalle completo de arquitectura, endpoints e instalación en
+> Backend completo y verificado end-to-end. Auth híbrida (2026-07-03): Firebase Auth volvió
+> únicamente para registro + verificación de email; el login sigue siendo 100% propio
+> (JWT + BCrypt), gateado por `email_verified` de Firebase vía Admin SDK. Ver sección
+> "Auth híbrida" más abajo. Detalle completo de arquitectura, endpoints e instalación en
 > `backend/README.md` — esto es solo un resumen para orientarse rápido.
 
 ### Progreso
 - [x] Modelo de datos (7 tablas: `Users`, `Roles`, `UserRoles` N-N, `Silos`, `SensorReadings`, `Alerts`, `AuditLogs`)
 - [x] Arquitectura en 3 capas (`SiloGuard.Api` / `SiloGuard.Business` / `SiloGuard.Data`, sin ciclos)
-- [x] Auth propia con JWT + BCrypt (reemplaza Firebase)
+- [x] Auth propia con JWT + BCrypt, login gateado por email verificado en Firebase
 - [x] Middleware global de errores (nunca expone stack trace al cliente)
 - [x] Controllers: Auth, Perfil, Silos (+ lecturas paginadas), Alertas, Admin
 - [x] Validación con FluentValidation + sanitización anti-XSS
@@ -223,14 +225,139 @@ esa constante si cambia la IP de la compu).
 
 - `src/config/api.ts` + `src/services/{authApi,siloApi,alertaApi,perfilApi,tokenStorage}.ts`: cliente HTTP con JWT (`expo-secure-store`).
 - `src/contexts/AppDataContext.tsx`: ya no usa mock — hace login/register/CRUD contra la API real.
-- `src/app/login.tsx`, `register.tsx`: ya no usan Firebase. Los botones de Google/Apple quedaron decorativos ("Próximamente").
-- `src/config/firebase.ts` fue borrado; `firebase`, `expo-auth-session`, `expo-web-browser` se sacaron de `package.json` (sin uso).
+- `src/app/login.tsx`: sigue llamando solo a la API propia (`/auth/login`). Los botones de Google/Apple quedan decorativos ("Próximamente").
+- `src/app/register.tsx`: usa Firebase (`createUserWithEmailAndPassword` + `sendEmailVerification`) y luego registra en la API propia; si el registro en la API falla, borra la cuenta de Firebase recién creada para poder reintentar.
 - `src/app/historial/[id].tsx` y `src/app/silo/[id].tsx`: gráficos con datos reales de `/api/silos/{id}/lecturas`.
+
+### Auth híbrida (Firebase registro/verificación + JWT propio) — 2026-07-03
+
+Decisión tomada: **no** reemplazar el backend por validación de tokens de Firebase (eso
+hubiera obligado a reescribir el middleware de auth y reprobar todos los endpoints con
+roles). En cambio:
+
+- **Registro** (`register.tsx`): crea la cuenta en Firebase, envía el correo de
+  verificación con el SDK cliente, y también crea el usuario en la base propia
+  (`POST /api/auth/register`, sin cambios — sigue emitiendo un JWT que el frontend
+  ignora a propósito).
+- **Login** (`login.tsx` → `POST /api/auth/login`, sin cambios en el frontend): el
+  backend (`AuthService.LoginAsync`) valida email+password contra su propio hash
+  BCrypt como siempre, y **además** llama a `IFirebaseAuthService.IsEmailVerifiedAsync`
+  (`SiloGuard.Business/Security/FirebaseAuthService.cs`, usa el Admin SDK
+  `FirebaseAuth.GetUserByEmailAsync`). Si el email no está verificado en Firebase,
+  devuelve 401 con un mensaje pidiendo verificar el correo — no emite el JWT.
+- `src/config/firebase.ts`: config pública del proyecto Firebase (apiKey de cliente,
+  no es secreta). `firebase` está de vuelta en `package.json`.
+- **Setup del Admin SDK (requerido para que el gate de verificación funcione):**
+  generar una clave de service account desde la consola de Firebase (Configuración del
+  proyecto → Cuentas de servicio → Generar nueva clave privada), guardarla como
+  `backend/src/SiloGuard.Api/firebase-service-account.json` (gitignored) y setear
+  `Firebase:CredentialsPath` en `appsettings.Development.json` apuntando a ese archivo
+  (ya está seteado a ese nombre por default). **Sin esa credencial, `FirebaseAuthService`
+  loguea un warning y deja pasar el login sin chequear verificación** (para no romper el
+  arranque en dev) — no depender de eso para producción/entrega final.
+- `Firebase:VerificationBypassEmails` en appsettings: lista de emails que se saltan el
+  chequeo. Trae `dev@siloguard.com` (el usuario seed de la demo) porque ese usuario se
+  crea directo en Postgres y nunca pasa por Firebase.
 
 ### Pendiente / fuera de alcance (no lo pidió la rúbrica)
 
 - "Mis lanzas" (`perfil/lanzas.tsx`) sigue siendo mock — no hay entidad de dispositivo IoT en el backend, la rúbrica no lo exige.
 - Preferencias de notificaciones (`perfil/notificaciones.tsx`) no persisten.
 - "Configurar umbrales" es un placeholder sin implementar.
+- No hay botón de "reenviar correo de verificación" — si el usuario lo borra o expira,
+  hoy no tiene forma de reenviarlo desde la app (quedaría para una próxima iteración).
+
+---
+
+## Estado del equipo y próximos pasos (actualizado 2026-07-03)
+
+> Sesión de trabajo con Claude Code. Esto es un resumen para retomar sin tener que releer
+> toda la conversación. El checklist técnico completo de la rúbrica (100 pts, todo ✅ salvo
+> el push a GitHub) está en `../CHECKLIST-INTEGRADOR-PROG3.md`, un nivel arriba de `SiloGuard/`.
+
+### 1. Git — commits locales, todavía sin pushear
+
+Hay 3 commits locales en `main` (sin coautoría de IA, autor `juanmac12`), **nada pusheado
+todavía**:
+```
+refactor: mover la app de la raíz a src/ (app/, assets/, config, constants)
+feat(backend): API .NET 10 + EF Core + PostgreSQL para el TP integrador
+feat(frontend): reconectar la app a la API real, reemplazar Firebase Auth
+```
+Falta decidir con Lucas cuándo y cómo se sube a GitHub (ver `GUIA-COLABORACION-GIT.md`).
+
+### 2. ⚠️ Hay un backend duplicado — decisión pendiente con Lucas Escobar (compañero, escobarlucas17@gmail.com)
+
+Investigando carpetas viejas en `~/Documentos/FACULTAD/PROGRAMACION III/PROGRAMACION BACKEND JUEVES/`
+se confirmó que **Lucas viene trabajando su propio backend en paralelo**, sin conectarlo con
+este proyecto:
+- `WebApp_SiloGuard/SiloguardApp_backend_/` — el más maduro de Lucas: ASP.NET **MVC** (no API
+  REST) en capas (`TUP.SiloGuard.Entidades/Datos/Negocio/WebAppMvc`) + **MySQL**. Última
+  modificación 2026-06-04. Repo propio: `github.com/EscobarLucas73/SiloguardApp_backend_`.
+- `WebAppMvc_Siloguard/` — versión anterior, compartida (2 commits, autores juanmac12 y Lucas).
+  Tiene `siloguard_presentacion.md` con buen material narrativo para la presentación.
+- `SiloguardApp_backend/` y `programacion3-app-SiloGuard/` — descartables (vacíos/scaffold).
+- `programación3-app-siloguard/.spec/spec.md` — carpeta sin git, tuya; tiene criterios de
+  aceptación por TP (US-01, US-02...), útil para chequear cobertura de requerimientos.
+
+**No se tocó nada de esas carpetas.** Pendiente: hablar con Lucas y decidir si siguen con el
+backend de `SiloGuard/backend/` (ya completo y verificado contra los 100 puntos de la
+rúbrica) o si rescatan algo del suyo antes. El proyecto no puede quedar con dos backends.
+
+### 3. Documentación por revisar/importar
+
+Copiados ya a `SiloGuard/docs/` (sin commitear todavía):
+- `SiloGuard_MVP.md` — definición original del MVP (problema, usuario "Carlos", 3 pantallas núcleo, métrica de éxito).
+- `SiloGuard_Presentacion.md` — material de presentación completo con diagramas. **Tiene una nota agregada al inicio**: la sección 8 (arquitectura) describe un stack viejo (FastAPI + TimescaleDB) que ya no es el real (.NET + PostgreSQL) — falta actualizarla antes de usarlo en la defensa.
+
+Todavía sin revisar/decidir qué hacer con:
+- `~/Documentos/FACULTAD/PROGRAMACION III/FRONTEND/DOCUMENTACION Y MDS/ETAPAS_TP_MVP_SILOGUARD.md` y los 4 `MVP_1ER/2DO/3ER/4TO_REQUERIMIENTO.md` — son la misma plantilla genérica de metodología (ejemplo "QuickEat"), no específica de SiloGuard. Probablemente no aportan nada al repo.
+- `WebAppMvc_Siloguard/siloguard_presentacion.md` (de Lucas) — comparar con `docs/SiloGuard_Presentacion.md`, puede haber contenido para combinar.
+- `programación3-app-siloguard/.spec/spec.md` — revisar criterios de aceptación por TP.
+
+### 4. Pantallas: comparar app implementada vs. las 28 de `src/design-system/SiloGuard_definicion_producto.md`
+
+**Hecho (2026-07-03):** se agregaron al Figma (`SiloGuard — UI Design`, página Wireframes) los
+wireframes low-fi de las 13 pantallas que estaban implementadas en la app pero no en Figma,
+en el mismo estilo gris que las 5 existentes. Organización de la página:
+- Parte A · Sitemap (sin tocar) · Parte B · Flujo principal (5 pantallas originales, sin tocar
+  — la consigna de Etapa 2 pide máx. 5 pantallas para el flujo principal, por eso lo nuevo va
+  en secciones aparte).
+- **Parte C** · Onboarding y auth: Splash, Login, Registro, Verificación de email, Registro exitoso (Pantallas 6–10).
+- **Parte D** · Gestión de silos y Pasaporte: Agregar silo · Conectar, Agregar silo · Datos, Editar silo, Pasaporte empty state (11–14).
+- **Parte E** · Perfil y configuración: Mi Perfil, Editar perfil, Mis lanzas, Notificaciones (15–18).
+Cada wireframe tiene anotaciones `*` con su estado real (mock, no persiste, decorativo, etc.).
+Pendiente en Figma: conectar las pantallas nuevas con Prototype (la rúbrica de Etapa 3 pide
+prototipo navegable) y, si se quiere, sumar Verificar email / Agregar silo / Perfil al sitemap.
+
+Comparando el doc de 28 pantallas contra lo que existe en `src/app/`, **faltan o están
+incompletas en la app** (no las pide la rúbrica del TPI, pero sí el documento de producto/Figma):
+
+| # | Pantalla | Estado |
+|---|---|---|
+| 2 | Welcome | No existe (se borró en la migración a `src/`, no se recreó) |
+| 6 | Recuperar contraseña | No existe — el link en `login.tsx` no lleva a ningún lado |
+| 7 | Solicitud de permisos push | No existe |
+| 8/9 | Vincular Lanza (onboarding post-registro, primera vez) | Solo existe la versión "agregar silo" (`agregar-silo.tsx`) reusada desde el Dashboard, no el flujo de primer ingreso |
+| 10 | Tutorial walkthrough | No existe |
+| 21 | Configuración de umbrales | Placeholder sin implementar |
+| 24 | Detalle del lote / Pasaporte | Tab "Calidad" es solo "Próximamente" |
+| 25 | Contacto con técnico (pantalla dedicada) | Solo hay un link externo a WhatsApp, no la pantalla con contexto de la alerta |
+| 26 | Resumen semanal | No existe |
+| 27 | Sin conexión (banner global) | No implementado |
+| 28 | Error de dispositivo / lanza (banner) | No implementado |
+
+Ya implementadas y conectadas a la API real: Splash, Login, Registro, Verificación de email
+(desconectada del flujo, ver nota arriba), Registro exitoso, Dashboard, Detalle de silo,
+Historial, Alertas (lista + detalle + resolución), Agregar/Editar/Eliminar silo, Perfil +
+Editar perfil, Mis lanzas (mock), Notificaciones (mock, no persiste).
+
+### Para retomar mañana
+1. Definir con Lucas qué pasa con el backend duplicado (punto 2).
+2. Revisar los `.md` pendientes (punto 3) y decidir qué se combina/descarta.
+3. Priorizar cuáles de las pantallas faltantes (punto 4) se diseñan en Figma y cuáles se
+   implementan — no todas están dentro del alcance del MVP original (`docs/SiloGuard_MVP.md`
+   explícitamente deja afuera onboarding/QR, umbrales, Pasaporte, resumen semanal y contacto
+   con técnico como "fuera del MVP, van al backlog").
 
 ---

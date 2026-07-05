@@ -3,3 +3,4 @@ obj/
 *.user
 .env
 src/SiloGuard.Api/appsettings.Development.json
+firebase-service-account*.json

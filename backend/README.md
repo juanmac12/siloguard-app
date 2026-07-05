@@ -68,7 +68,7 @@ compu (ej. `http://192.168.0.9:5210/api`), no a `localhost`. El comando de arrib
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
 | POST | `/api/auth/register` | público | Crea usuario (rol Productor por defecto) |
-| POST | `/api/auth/login` | público | Devuelve JWT |
+| POST | `/api/auth/login` | público | Devuelve JWT (401 si el email no está verificado en Firebase, ver abajo) |
 | GET/PUT | `/api/perfil` | JWT | Perfil del usuario autenticado |
 | GET | `/api/silos` | JWT | Lista de silos del usuario |
 | GET | `/api/silos/{id}` | JWT | Detalle de un silo |
@@ -82,6 +82,32 @@ compu (ej. `http://192.168.0.9:5210/api`), no a `localhost`. El comando de arrib
 | GET | `/api/admin/usuarios` | JWT + rol Admin | Lista de usuarios (demuestra rutas protegidas por rol) |
 
 Todos los endpoints requieren `Authorization: Bearer <token>` salvo los dos de `auth`.
+
+## Auth híbrida: Firebase (registro/verificación) + JWT propio (login)
+
+El registro y el envío del correo de verificación de email los maneja el frontend con el
+SDK cliente de Firebase (`src/config/firebase.ts`). El backend no participa de eso — sólo
+usa el **Admin SDK de Firebase** en el login, para confirmar que el email esté verificado
+antes de emitir su propio JWT (`AuthService.LoginAsync` →
+`SiloGuard.Business/Security/FirebaseAuthService.cs`).
+
+Para que ese chequeo funcione hace falta un service account de Firebase:
+
+1. Firebase Console → Configuración del proyecto → Cuentas de servicio → "Generar nueva
+   clave privada" → descarga un `.json`.
+2. Guardarlo como `src/SiloGuard.Api/firebase-service-account.json` (ya está en
+   `.gitignore`, no se commitea).
+3. Confirmar que `Firebase:CredentialsPath` en `appsettings.Development.json` apunta a ese
+   archivo (por default ya dice `"firebase-service-account.json"`).
+
+Si el archivo no existe, `FirebaseAuthService` loguea un warning al loguearse y **deja
+pasar el login sin chequear verificación** (para no romper el arranque en un dev
+environment sin el service account todavía cargado) — antes de la entrega final, confirmar
+que el archivo esté presente para que el gate realmente se aplique.
+
+`Firebase:VerificationBypassEmails` (appsettings) tiene `dev@siloguard.com` — el usuario
+seed de la demo se crea directo en Postgres y nunca pasa por Firebase, así que sin ese
+bypass no podría loguearse nunca.
 
 ## Transacción con rollback demostrable (Parte 4.3)
 
@@ -125,7 +151,8 @@ curl -s http://localhost:5210/api/silos -H "Authorization: Bearer $TOKEN" | jq l
 | OWASP SQLi | Todo el acceso a datos es LINQ/EF parametrizado, sin `FromSqlRaw` interpolado |
 | Swagger + docs | `http://localhost:5210/swagger` |
 
-## Pendiente (Fase B, fuera de este backend)
+## Estado del frontend (fuera de este backend)
 
-Reconectar el frontend (`SiloGuard/src/`) para que consuma esta API real en vez del mock
-actual de `AppDataContext.tsx`, y reemplazar el login/registro de Firebase por JWT propio.
+El frontend (`SiloGuard/src/`) ya consume esta API real (`AppDataContext.tsx`, sin mock).
+Registro usa Firebase para crear la cuenta y verificar el email; login llama solo a esta
+API. Ver la sección "Auth híbrida" en `../CLAUDE.md` para el detalle completo.

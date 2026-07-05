@@ -16,6 +16,7 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddAppData(builder.Configuration);
 builder.Services.AddAppServices();
+builder.Services.AddFirebaseAuth(builder.Configuration);
 builder.Services.AddJwtAuth(builder.Configuration);
 builder.Services.AddCorsDev();
 

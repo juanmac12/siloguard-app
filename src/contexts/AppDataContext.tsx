@@ -140,11 +140,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const token = await getToken();
       if (token) {
-        setIsAuthenticated(true);
         try {
+          // Validamos el token contra la API antes de dar la sesión por buena:
+          // un token guardado puede estar vencido, o el servidor puede no responder.
           await loadAll();
+          setIsAuthenticated(true);
         } catch {
-          // apiFetch ya redirige a /login y limpia el token si la sesión expiró
+          // 401 → apiFetch ya limpió el token. Error de red → conservamos el token
+          // pero arrancamos en el login, nunca en un dashboard vacío sin datos.
         }
       }
       setLoading(false);

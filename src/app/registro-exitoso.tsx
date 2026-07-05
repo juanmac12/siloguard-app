@@ -21,8 +21,8 @@ export default function RegistroExitosoScreen() {
         {/* Text */}
         <Text style={styles.title}>¡Cuenta creada!</Text>
         <Text style={styles.subtitle}>
-          Tu cuenta fue creada con éxito. Ahora{"\n"}
-          vamos a configurar tu primer dispositivo.
+          Te enviamos un correo de verificación.{"\n"}
+          Abrilo y confirmá tu cuenta antes de iniciar sesión.
         </Text>
       </View>
 
@@ -33,7 +33,7 @@ export default function RegistroExitosoScreen() {
           onPress={() => router.replace("/login")}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>Continuar</Text>
+          <Text style={styles.buttonText}>Ir a iniciar sesión</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -1,5 +1,7 @@
 using System.Text;
+using FirebaseAdmin;
 using FluentValidation;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -49,6 +51,30 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUsuarioAdminService, UsuarioAdminService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+
+        return services;
+    }
+
+    // Firebase Admin solo se usa para chequear email_verified en el login (Registro
+    // e verificación de email los maneja el cliente con el SDK de Firebase). Sin
+    // credenciales configuradas queda "apagado" (ver FirebaseAuthService) para no
+    // romper el arranque en entornos donde todavía no se cargó el service account.
+    public static IServiceCollection AddFirebaseAuth(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<FirebaseSettings>(configuration.GetSection("Firebase"));
+        var settings = configuration.GetSection("Firebase").Get<FirebaseSettings>() ?? new FirebaseSettings();
+
+        if (FirebaseApp.DefaultInstance is null
+            && !string.IsNullOrWhiteSpace(settings.CredentialsPath)
+            && File.Exists(settings.CredentialsPath))
+        {
+            var credential = CredentialFactory.FromFile<ServiceAccountCredential>(settings.CredentialsPath)
+                .ToGoogleCredential();
+
+            FirebaseApp.Create(new AppOptions { Credential = credential });
+        }
+
+        services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
 
         return services;
     }

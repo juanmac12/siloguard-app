@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +7,8 @@ import {
   Alert,
   ScrollView,
   Linking,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Spacing, FontSize, ThemeColors, Radius, FontWeight } from "../../constants/Theme";
@@ -134,22 +137,21 @@ export default function PerfilScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { profile, silos, logout } = useAppData();
+  const [logoutModal, setLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const onlineCount = DEVICES.filter((d) => d.status === "online").length;
   const totalDevices = DEVICES.length;
 
-  const handleLogout = () => {
-    Alert.alert("Cerrar sesión", "Vas a salir de tu cuenta en este dispositivo.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Sí, cerrar sesión",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/login");
-        },
-      },
-    ]);
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+      setLogoutModal(false);
+      router.replace("/login");
+    }
   };
 
   return (
@@ -223,7 +225,7 @@ export default function PerfilScreen() {
           <MRow
             icon="lock"
             label="Cambiar contraseña"
-            onPress={() => Alert.alert("Próximamente", "Esta función estará disponible pronto.")}
+            onPress={() => router.push("/perfil/cambiar-password")}
             colors={colors}
           />
           <MRow
@@ -254,7 +256,7 @@ export default function PerfilScreen() {
 
         {/* Logout */}
         <TouchableOpacity
-          onPress={handleLogout}
+          onPress={() => setLogoutModal(true)}
           style={styles.logoutBtn}
           activeOpacity={0.7}
         >
@@ -267,6 +269,52 @@ export default function PerfilScreen() {
           SiloGuard v1.0.0
         </Text>
       </ScrollView>
+
+      {/* Logout confirmation modal — reemplaza Alert.alert nativo porque no se
+          renderiza al compartir pantalla (los botones no aparecen). */}
+      <Modal
+        visible={logoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLogoutModal(false)}
+      >
+        <Pressable style={styles.overlay} onPress={() => setLogoutModal(false)} />
+        <View style={styles.modalCenter}>
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault },
+            ]}
+          >
+            <View style={[styles.modalIcon, { backgroundColor: colors.statusCriticalTint }]}>
+              <Icon name="log-out" size={24} color={colors.statusCritical} />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+              Cerrar sesión
+            </Text>
+            <Text style={[styles.modalSub, { color: colors.textSecondary }]}>
+              Vas a salir de tu cuenta en este dispositivo.
+            </Text>
+            <TouchableOpacity
+              onPress={confirmLogout}
+              disabled={loggingOut}
+              style={[
+                styles.modalBtn,
+                { backgroundColor: colors.statusCritical, opacity: loggingOut ? 0.6 : 1 },
+              ]}
+            >
+              <Text style={[styles.modalBtnText, { color: "#fff" }]}>
+                {loggingOut ? "Cerrando…" : "Sí, cerrar sesión"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setLogoutModal(false)} style={styles.modalCancelBtn}>
+              <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>
+                Cancelar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -377,4 +425,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
   },
+
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  modalCenter: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", padding: 24 },
+  modalCard: { width: "100%", borderRadius: Radius.xl, borderWidth: 1, padding: 24, alignItems: "center" },
+  modalIcon: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 14 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8, textAlign: "center" },
+  modalSub: { fontSize: 14, lineHeight: 22, textAlign: "center", marginBottom: 20 },
+  modalBtn: { width: "100%", borderRadius: Radius.md, paddingVertical: 14, alignItems: "center", marginBottom: 8 },
+  modalBtnText: { fontSize: 15, fontWeight: "700" },
+  modalCancelBtn: { paddingVertical: 10 },
+  modalCancelText: { fontSize: 14 },
 });

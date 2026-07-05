@@ -15,6 +15,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher _hasher;
     private readonly ITokenService _tokens;
     private readonly IInputSanitizer _sanitizer;
+    private readonly IFirebaseAuthService _firebaseAuth;
 
     public AuthService(
         IUsuarioRepository usuarios,
@@ -22,7 +23,8 @@ public class AuthService : IAuthService
         IUnitOfWork uow,
         IPasswordHasher hasher,
         ITokenService tokens,
-        IInputSanitizer sanitizer)
+        IInputSanitizer sanitizer,
+        IFirebaseAuthService firebaseAuth)
     {
         _usuarios = usuarios;
         _roles = roles;
@@ -30,6 +32,7 @@ public class AuthService : IAuthService
         _hasher = hasher;
         _tokens = tokens;
         _sanitizer = sanitizer;
+        _firebaseAuth = firebaseAuth;
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -66,6 +69,10 @@ public class AuthService : IAuthService
         var user = await _usuarios.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), ct);
         if (user is null || !_hasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAppException("Email o contraseña incorrectos.");
+
+        if (!await _firebaseAuth.IsEmailVerifiedAsync(user.Email, ct))
+            throw new UnauthorizedAppException(
+                "Verificá tu email antes de iniciar sesión. Revisá el correo que te enviamos al registrarte.");
 
         var roles = await _usuarios.GetRoleNamesAsync(user.Id, ct);
         var token = _tokens.GenerateToken(user, roles);

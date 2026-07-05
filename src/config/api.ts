@@ -33,7 +33,18 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     if (token) finalHeaders.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...rest, headers: finalHeaders });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { ...rest, headers: finalHeaders });
+  } catch {
+    // fetch tira TypeError cuando ni siquiera llega al servidor (backend apagado,
+    // IP de LAN cambiada, celular en otra red). Sin esto, las pantallas muestran
+    // un mensaje genérico que no dice cuál es el problema real.
+    throw new ApiError(
+      0,
+      "No se pudo conectar al servidor. Verificá que el backend esté corriendo y que el dispositivo esté en la misma red Wi-Fi."
+    );
+  }
 
   if (response.status === 204) {
     return undefined as T;

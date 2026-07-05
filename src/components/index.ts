@@ -13,3 +13,5 @@ export { AlertCard } from './AlertCard';
 export { ListItem } from './ListItem';
 export { NavBar, StepDots } from './NavBar';
 export type { TabKey } from './NavBar';
+export { ScoreRing, scoreTone, scoreToneLabel } from './ScoreRing';
+export type { ScoreTone } from './ScoreRing';
