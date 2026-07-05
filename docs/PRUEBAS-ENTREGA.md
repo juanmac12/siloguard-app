@@ -102,8 +102,18 @@ Verificaciones de arranque:
 - [ ] Loading/spinner en el historial mientras trae datos.
 - [ ] Confirmaciones antes de eliminar.
 
+## A8. Pasaporte de Calidad / Lotes (feature real — persiste en el backend)
+
+| # | Qué probar | Esperado | Rúbrica |
+|---|---|---|---|
+| A8.1 | Detalle de un silo sin lote activo → botón **"Iniciar lote"** | Se crea el lote; aparece la tarjeta "Lote en monitoreo" con N° y días | 4.2 |
+| A8.2 | Tab Pasaporte → pestaña **Activos** | Lista los lotes en monitoreo (incluye el recién iniciado) desde la API | 3.1 |
+| A8.3 | Tocar un lote (card) | Certificado con score, silo, grano, período, promedios y QR | 4.1 |
+| A8.4 | Detalle del silo con lote activo → **"Finalizar y generar pasaporte"** | El lote pasa a **Certificados** con score y promedios reales computados | 4.2 |
+| A8.5 | Tab Pasaporte → pestaña **Certificados** | Muestra los lotes finalizados | 3.1 |
+| A8.6 | Iniciar un lote en un silo que ya tiene uno en monitoreo | Mensaje "El silo ya tiene un lote en monitoreo" (no crea otro) | 3.3 |
+
 ### ⚠️ Fuera de alcance — NO probar como funcionalidad real (declarado como mock)
-- **Pasaporte / Lotes** — datos derivados de los silos (`utils/mockLotes.ts`), no persisten, sin entidad `Lote` en el backend.
 - **Mis lanzas** — mock, sin entidad IoT.
 - **Notificaciones** — toggles no persisten.
 - **Configurar umbrales** — placeholder.
@@ -233,6 +243,29 @@ curl -i -s http://localhost:5210/api/admin/usuarios -H "Authorization: Bearer $T
 # Ejemplo de inspección (ajustar nombre del contenedor/DB):
 docker exec -it siloguard-db psql -U postgres -d siloguard -c '\dt'
 ```
+
+## B9. Lotes / Pasaporte de Calidad (Parte 2/4 — maestro-detalle + transacción)
+
+```bash
+# Iniciar lote en un silo sin lote activo → 201
+LID=$(curl -s -X POST "http://localhost:5210/api/silos/2/lotes" -H "$AUTH" | jq -r '.id')
+
+# Finalizar → 200, el backend computa score + promedios sobre las lecturas
+curl -s -X POST "http://localhost:5210/api/lotes/$LID/finalizar" -H "$AUTH" \
+  | jq '{status, score, avgCo2, avgTemp, avgHum, alertsResolved}'
+```
+
+| # | Prueba | Esperado |
+|---|---|---|
+| B9.1 | `POST /api/silos/{siloId}/lotes` en un silo sin lote activo | 201, lote `monitoring` con `codigo` `SG-YYYY-XXXX` |
+| B9.2 | `POST /api/silos/{siloId}/lotes` con un lote ya activo | 409 "El silo ya tiene un lote en monitoreo" |
+| B9.3 | `GET /api/lotes` | 200, lista los lotes del usuario (2 seed + los creados) |
+| B9.4 | `POST /api/lotes/{id}/finalizar` | 200, `status=finalized` + `score`/promedios computados de las lecturas (transacción) |
+| B9.5 | `GET /api/lotes/{id}` | 200, pasaporte del lote |
+| B9.6 | `GET /api/lotes/{id}` de otro usuario | 403 |
+| B9.7 | `GET /api/lotes/999999` | 404 |
+| B9.8 | `GET /api/lotes` sin token | 401 |
+| B9.9 | `AuditLogs` tras iniciar/finalizar | Filas `Lote / Added` y `Lote / Modified` (auditoría automática) |
 
 ---
 

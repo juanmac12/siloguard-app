@@ -189,6 +189,7 @@ Ver `src/design-system/SiloGuard_definicion_producto.md` para la descripción co
 - [x] Swagger en `/swagger`
 - [x] Seeder con datos demo (usuario `dev@siloguard.com` / `Demo1234`, 6 silos, ~1000 lecturas, 5 alertas)
 - [x] **Frontend reconectado a la API real** (`src/services/*`, `AppDataContext.tsx`, login/register propios)
+- [x] **Pasaporte de Calidad (Lotes)**: entidad `Lote` (1-N con `Silo`), score + promedios de sensores computados al finalizar (en transacción), auditoría automática. Endpoints: `POST /api/silos/{id}/lotes` (iniciar, 409 si ya hay uno activo), `POST /api/lotes/{id}/finalizar`, `GET /api/lotes`, `GET /api/lotes/{id}`. Front: tab Pasaporte + detalle de lote + botón Iniciar/Finalizar en el detalle del silo.
 
 ### Estructura
 

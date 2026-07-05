@@ -103,6 +103,5 @@ npx expo start --go -c
 - **Notificaciones** (`perfil/notificaciones.tsx`) — los toggles no persisten.
 - **Configurar umbrales** — placeholder.
 - **Google/Apple login** — botones decorativos ("Próximamente").
-- **Pasaporte/Lotes** — datos mock (`mockLotes.ts`), fuera del MVP.
 - **"Olvidé mi contraseña"** (reset por email desde el login) — trabajo futuro documentado;
   el cambio de contraseña desde Perfil sí está implementado (`PUT /api/perfil/password`).

@@ -5,11 +5,10 @@
 **Tipo de entregable**: App móvil (MVP)
 **Fecha**: 2026
 
-> ⚠️ **Nota (copiado sin editar desde el documento original de planificación):** la sección 8
-> "Arquitectura Técnica" de más abajo describe el stack que se había planeado en su momento
-> (FastAPI + PostgreSQL/TimescaleDB). El proyecto que finalmente se construyó y está en este
-> repo usa **.NET 10 + PostgreSQL** (ver `backend/README.md`), no FastAPI/TimescaleDB. Falta
-> actualizar esa sección antes de usar este documento tal cual para la presentación final.
+> ℹ️ **Nota:** este documento viene del material de planificación original. La sección 8
+> "Arquitectura Técnica" ya fue actualizada al stack real del proyecto: **.NET 10 (ASP.NET Core
+> Web API) + EF Core + PostgreSQL** (ver `backend/README.md`), no el FastAPI/TimescaleDB que se
+> había planeado en su momento.
 
 ---
 
@@ -292,8 +291,8 @@ Ya existen sistemas de monitoreo de silos en el mercado (INTA Co2ntrol, Silcheck
 | Capa | Tecnología | Por qué |
 |---|---|---|
 | **Frontend mobile** | React Native + Expo | Una sola codebase para Android + iOS. Setup rápido. JavaScript ya conocido. |
-| **Backend / API** | FastAPI (Python) | Rápido de desarrollar, tipado, excelente integración con análisis de datos. |
-| **Base de datos** | PostgreSQL + TimescaleDB | TimescaleDB está optimizada para series temporales (lecturas cada 10-30 min durante meses). |
+| **Backend / API** | .NET 10 (ASP.NET Core Web API) + EF Core | API REST en 3 capas (Api / Business / Data), tipado fuerte, JWT + roles, transacciones y validación robusta. |
+| **Base de datos** | PostgreSQL 16 | Relacional, migraciones con EF Core. (Para series temporales a gran escala se evaluó TimescaleDB; para el alcance del MVP, PostgreSQL estándar alcanza.) |
 | **Notificaciones push** | Expo Push / Firebase Cloud Messaging | Standard de la industria, gratuito hasta volúmenes altos. |
 | **Hosting / Deploy** | Railway o Vercel | Deploy en minutos, sin manejo de infraestructura. |
 
@@ -350,7 +349,7 @@ timeline
 | Materia | Cómo se aplica al MVP |
 |---|---|
 | **Programación III** | App móvil con React Native, manejo de estado, navegación entre pantallas |
-| **Base de Datos** | Modelado de datos relacionales (usuarios, silos, lecturas), series temporales con TimescaleDB |
+| **Base de Datos** | Modelado relacional (usuarios, roles N-N, silos, lecturas, alertas, lotes, auditoría) en PostgreSQL con EF Core |
 | **Redes** | Protocolo HTTPS entre app y backend, futuras integraciones MQTT con la lanza IoT |
 | **Sistemas Operativos** | Notificaciones push, manejo de procesos en el servidor backend |
 | **Ingeniería de Software** | Metodología de desarrollo MVP, testing, control de versiones, CI/CD |
