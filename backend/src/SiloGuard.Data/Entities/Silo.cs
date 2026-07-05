@@ -27,4 +27,5 @@ public class Silo
 
     public ICollection<SensorReading> Readings { get; set; } = new List<SensorReading>();
     public ICollection<Alert> Alerts { get; set; } = new List<Alert>();
+    public ICollection<Lote> Lotes { get; set; } = new List<Lote>();
 }

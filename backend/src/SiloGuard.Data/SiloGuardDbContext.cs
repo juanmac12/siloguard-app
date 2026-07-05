@@ -21,6 +21,7 @@ public class SiloGuardDbContext : DbContext
     public DbSet<Silo> Silos => Set<Silo>();
     public DbSet<SensorReading> SensorReadings => Set<SensorReading>();
     public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<Lote> Lotes => Set<Lote>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -38,7 +39,7 @@ public class SiloGuardDbContext : DbContext
         {
             StampTimestamps(entry, now);
 
-            if (entry.Entity is Silo or Alert)
+            if (entry.Entity is Silo or Alert or Lote)
             {
                 var action = entry.State switch
                 {
@@ -81,6 +82,10 @@ public class SiloGuardDbContext : DbContext
             case Silo silo:
                 if (entry.State == EntityState.Added) silo.CreatedAt = now;
                 if (entry.State is EntityState.Added or EntityState.Modified) silo.UpdatedAt = now;
+                break;
+            case Lote lote:
+                if (entry.State == EntityState.Added) lote.CreatedAt = now;
+                if (entry.State is EntityState.Added or EntityState.Modified) lote.UpdatedAt = now;
                 break;
         }
     }

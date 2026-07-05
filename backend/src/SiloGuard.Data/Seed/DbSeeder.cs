@@ -155,5 +155,47 @@ public static class DbSeeder
         };
         db.Alerts.AddRange(alerts);
         await db.SaveChangesAsync();
+
+        // Lotes demo (Pasaporte de Calidad): uno en monitoreo y uno finalizado, para que el
+        // tab Pasaporte no arranque vacio. Los promedios se toman de la ultima lectura del silo.
+        var siloNorte = siloByName["Silo Norte"];
+        var siloOeste = siloByName["Silo Oeste"];
+        var lotes = new List<Lote>
+        {
+            new()
+            {
+                SiloId = siloNorte.Id,
+                Codigo = $"SG-{now.Year}-{siloNorte.Id:X4}",
+                Name = $"Lote {siloNorte.Grain} Norte",
+                Grain = siloNorte.Grain,
+                Tons = siloNorte.Tons,
+                StartAt = now.AddDays(-45),
+                EndAt = null,
+                Status = "monitoring",
+                AvgCo2 = siloNorte.LastCo2,
+                AvgTemp = siloNorte.LastTemp,
+                AvgHum = siloNorte.LastHum,
+                Score = 92,
+                AlertsResolved = 1,
+            },
+            new()
+            {
+                SiloId = siloOeste.Id,
+                Codigo = $"SG-{now.Year}-{siloOeste.Id + 100:X4}",
+                Name = $"Lote {siloOeste.Grain} Oeste",
+                Grain = siloOeste.Grain,
+                Tons = siloOeste.Tons,
+                StartAt = now.AddDays(-120),
+                EndAt = now.AddDays(-15),
+                Status = "finalized",
+                AvgCo2 = siloOeste.LastCo2,
+                AvgTemp = siloOeste.LastTemp,
+                AvgHum = siloOeste.LastHum,
+                Score = 94,
+                AlertsResolved = 1,
+            },
+        };
+        db.Lotes.AddRange(lotes);
+        await db.SaveChangesAsync();
     }
 }

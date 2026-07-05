@@ -3,8 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-nati
 import { useRouter } from "expo-router";
 import { Spacing, FontSize, ThemeColors, Radius } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
-import { useAppData } from "../../contexts/AppDataContext";
-import { buildLotesFromSilos, Lote } from "../../utils/mockLotes";
+import { useAppData, Lote } from "../../contexts/AppDataContext";
 import { Icon, Input, ScoreRing } from "../../components";
 
 const TABS = [
@@ -43,13 +42,13 @@ function LoteCard({ lote, colors, onPress }: { lote: Lote; colors: ThemeColors; 
 export default function PasaporteScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { silos } = useAppData();
+  const { lotes } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [tab, setTab] = useState<TabId>("activos");
   const [query, setQuery] = useState("");
   const [grainFilter, setGrainFilter] = useState<string>("all");
 
-  const allLotes = useMemo(() => buildLotesFromSilos(silos), [silos]);
+  const allLotes = lotes;
   const grains = useMemo(() => ["all", ...Array.from(new Set(allLotes.map((l) => l.grain)))], [allLotes]);
 
   const statusFilter = tab === "activos" ? "monitoring" : "finalized";

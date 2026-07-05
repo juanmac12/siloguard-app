@@ -28,4 +28,18 @@ public class SensorReadingRepository : ISensorReadingRepository
 
         return new PagedReadings(items, total);
     }
+
+    public async Task<ReadingAverages> GetAveragesAsync(int siloId, DateTime from, DateTime to, CancellationToken ct = default)
+    {
+        var query = _db.SensorReadings.Where(r => r.SiloId == siloId && r.Timestamp >= from && r.Timestamp <= to);
+
+        var count = await query.CountAsync(ct);
+        if (count == 0) return new ReadingAverages(0m, 0m, 0m, 0);
+
+        return new ReadingAverages(
+            Math.Round(await query.AverageAsync(r => r.Co2, ct), 0),
+            Math.Round(await query.AverageAsync(r => r.Temp, ct), 1),
+            Math.Round(await query.AverageAsync(r => r.Hum, ct), 1),
+            count);
+    }
 }

@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISiloRepository, SiloRepository>();
         services.AddScoped<ISensorReadingRepository, SensorReadingRepository>();
         services.AddScoped<IAlertaRepository, AlertaRepository>();
+        services.AddScoped<ILoteRepository, LoteRepository>();
 
         return services;
     }
@@ -48,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISiloService, SiloService>();
         services.AddScoped<ILecturaService, LecturaService>();
         services.AddScoped<IAlertaService, AlertaService>();
+        services.AddScoped<ILoteService, LoteService>();
         services.AddScoped<IUsuarioAdminService, UsuarioAdminService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();

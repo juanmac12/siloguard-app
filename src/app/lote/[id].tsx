@@ -4,7 +4,6 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Spacing, ThemeColors, Radius } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { buildLotesFromSilos, Lote } from "../../utils/mockLotes";
 import { Icon, Button, StatusBadge, ScoreRing } from "../../components";
 
 const MONO = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
@@ -94,14 +93,14 @@ function ShareOption({ icon, label, sub, onPress, colors }: {
 export default function LoteDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { silos } = useAppData();
+  const { lotes } = useAppData();
   const { id } = useLocalSearchParams<{ id: string }>();
   const styles2 = useMemo(() => makeStyles(colors), [colors]);
   const [showShare, setShowShare] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const lote = useMemo(() => buildLotesFromSilos(silos).find((l) => l.id === id), [silos, id]);
+  const lote = useMemo(() => lotes.find((l) => l.id === Number(id)), [lotes, id]);
 
   if (!lote) return null;
   const isMon = lote.status === "monitoring";
@@ -139,7 +138,7 @@ export default function LoteDetailScreen() {
               <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "700" }}>SiloGuard</Text>
             </View>
             <Text style={styles2.certEyebrow}>CERTIFICADO DE CALIDAD</Text>
-            <Text style={{ fontFamily: MONO, fontSize: 10, color: colors.textMuted }}>N° {lote.id}</Text>
+            <Text style={{ fontFamily: MONO, fontSize: 10, color: colors.textMuted }}>N° {lote.codigo}</Text>
             <StatusBadge tone={isMon ? "ok" : "resolved"} label={isMon ? "En monitoreo" : "Finalizado"} style={{ marginTop: 4 }} />
           </View>
 
@@ -161,11 +160,11 @@ export default function LoteDetailScreen() {
 
           <View style={[styles2.qrRow, { borderTopColor: colors.borderDefault }]}>
             <TouchableOpacity onPress={() => setShowQR(true)}>
-              <FakeQR seed={lote.id} size={64} />
+              <FakeQR seed={lote.codigo} size={64} />
             </TouchableOpacity>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles2.qrLabel}>HASH DE VERIFICACIÓN</Text>
-              <Text style={{ fontFamily: MONO, fontSize: 12, color: colors.textPrimary, marginBottom: 5 }} numberOfLines={1}>{lote.id}</Text>
+              <Text style={{ fontFamily: MONO, fontSize: 12, color: colors.textPrimary, marginBottom: 5 }} numberOfLines={1}>{lote.codigo}</Text>
               <TouchableOpacity onPress={() => setShowQR(true)} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                 <Text style={{ color: colors.actionPrimary, fontSize: 12, fontWeight: "600" }}>Ampliar QR</Text>
                 <Icon name="chevron-right" size={13} color={colors.actionPrimary} />
@@ -192,7 +191,7 @@ export default function LoteDetailScreen() {
             <View style={{ gap: 8 }}>
               <ShareOption icon="file-text" label="Descargar como PDF" sub="Documento listo para imprimir" onPress={() => setShowShare(false)} colors={colors} />
               <ShareOption icon="camera" label="Compartir como imagen" sub="Ideal para WhatsApp o email" onPress={() => setShowShare(false)} colors={colors} />
-              <ShareOption icon="link" label={copied ? "¡Link copiado!" : "Copiar link de verificación"} sub={`siloguard.com/verify/${lote.id}`} onPress={copyLink} colors={colors} />
+              <ShareOption icon="link" label={copied ? "¡Link copiado!" : "Copiar link de verificación"} sub={`siloguard.com/verify/${lote.codigo}`} onPress={copyLink} colors={colors} />
               <ShareOption icon="scan-qr" label="Ver QR grande" sub="Para mostrar o escanear en persona" onPress={() => { setShowShare(false); setShowQR(true); }} colors={colors} />
             </View>
           </Pressable>
@@ -204,8 +203,8 @@ export default function LoteDetailScreen() {
           <Pressable style={[styles2.qrModal, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
             <Text style={styles2.sheetTitle}>Verificación del lote</Text>
             <View style={{ alignItems: "center", gap: 14, paddingVertical: 8 }}>
-              <FakeQR seed={lote.id} size={220} />
-              <Text style={{ fontFamily: MONO, fontSize: 13, color: colors.textPrimary, fontWeight: "600" }}>{lote.id}</Text>
+              <FakeQR seed={lote.codigo} size={220} />
+              <Text style={{ fontFamily: MONO, fontSize: 13, color: colors.textPrimary, fontWeight: "600" }}>{lote.codigo}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: "center", lineHeight: 19 }}>
                 Escaneá este código para verificar la autenticidad del certificado en siloguard.com/verify
               </Text>

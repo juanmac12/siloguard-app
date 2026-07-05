@@ -9,7 +9,7 @@ import { Spacing, ThemeColors, Radius, FontSize } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { siloApi } from "../../services/siloApi";
-import { Icon, AlertCard, StatusBadge } from "../../components";
+import { Icon, AlertCard, StatusBadge, Button } from "../../components";
 
 /* ── Sparkline con react-native-svg ── */
 function Sparkline({ data, color = "#22C55E", height = 60 }: { data: number[]; color?: string; height?: number }) {
@@ -97,11 +97,12 @@ const FORECAST = [
 export default function SiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { silos, alerts } = useAppData();
+  const { silos, alerts, lotes, iniciarLote, finalizarLote, notify } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tab, setTab] = useState<"info" | "alertas">("info");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loteLoading, setLoteLoading] = useState(false);
 
   const silo = silos.find((s) => s.id === Number(id));
 
@@ -115,6 +116,33 @@ export default function SiloScreen() {
   }, [silo?.id]);
 
   if (!silo) return null;
+
+  const activeLote = lotes.find((l) => l.siloId === silo.id && l.status === "monitoring");
+
+  const onIniciarLote = async () => {
+    setLoteLoading(true);
+    try {
+      await iniciarLote(silo.id);
+      notify("Lote iniciado — el silo está en monitoreo");
+    } catch (e: any) {
+      notify(e?.message ?? "No se pudo iniciar el lote");
+    } finally {
+      setLoteLoading(false);
+    }
+  };
+
+  const onFinalizarLote = async () => {
+    if (!activeLote) return;
+    setLoteLoading(true);
+    try {
+      await finalizarLote(activeLote.id);
+      notify("Lote finalizado — pasaporte generado");
+    } catch (e: any) {
+      notify(e?.message ?? "No se pudo finalizar el lote");
+    } finally {
+      setLoteLoading(false);
+    }
+  };
 
   const siloAlerts = alerts.filter((a) => a.siloId === silo.id);
   const sparklineData = trend.length >= 2 ? trend : [silo.temp, silo.temp];
@@ -184,6 +212,30 @@ export default function SiloScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {tab === "info" ? (
           <>
+            {/* Pasaporte de calidad — iniciar / finalizar lote */}
+            <Text style={[LBL_STYLE, { color: colors.textSecondary }]}>Pasaporte de calidad</Text>
+            <View style={[styles.infoCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, padding: 14, gap: 12, marginBottom: 16 }]}>
+              {activeLote ? (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "600" }} numberOfLines={1}>Lote en monitoreo</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>N° {activeLote.codigo} · {activeLote.days} días</Text>
+                    </View>
+                    <StatusBadge tone="ok" label="En monitoreo" />
+                  </View>
+                  <Button variant="secondary" fullWidth loading={loteLoading} onPress={onFinalizarLote}>Finalizar y generar pasaporte</Button>
+                </>
+              ) : (
+                <>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
+                    Este silo no tiene un lote en monitoreo. Iniciá uno para generar su pasaporte de calidad.
+                  </Text>
+                  <Button variant="primary" fullWidth loading={loteLoading} onPress={onIniciarLote}>Iniciar lote</Button>
+                </>
+              )}
+            </View>
+
             {/* Grain info */}
             <Text style={[LBL_STYLE, { color: colors.textSecondary }]}>Información del grano</Text>
             <View style={[styles.infoCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>

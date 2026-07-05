@@ -3,8 +3,9 @@ import { alertaApi } from '../services/alertaApi';
 import { authApi, RegisterPayload } from '../services/authApi';
 import { perfilApi, PerfilUpdatePayload } from '../services/perfilApi';
 import { siloApi, SiloCreatePayload, SiloUpdatePayload } from '../services/siloApi';
+import { loteApi } from '../services/loteApi';
 import { clearToken, getToken, saveToken } from '../services/tokenStorage';
-import { AlertaResponse, PerfilResponse, SiloResponse } from '../services/types';
+import { AlertaResponse, LoteResponse, PerfilResponse, SiloResponse } from '../services/types';
 import { formatRelativeTime } from '../utils/relativeTime';
 
 export interface Profile {
@@ -49,7 +50,31 @@ export interface SiloAlert {
   resolutionReason?: string;
 }
 
+export interface Lote {
+  id: number;
+  codigo: string;
+  siloId: number;
+  siloName: string;
+  name: string;
+  grain: string;
+  tons: number;
+  start: string;
+  end: string | null;
+  days: number;
+  status: 'monitoring' | 'finalized';
+  score: number;
+  alertsResolved: number;
+  avg: { co2: number; temp: number; hum: number };
+}
+
 const EMPTY_PROFILE: Profile = { name: '', email: '', phone: '', farmName: '', farmLoc: '', farmHa: 0 };
+
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 function mapProfile(r: PerfilResponse): Profile {
   return {
@@ -99,8 +124,28 @@ function mapAlert(r: AlertaResponse): SiloAlert {
   };
 }
 
+function mapLote(r: LoteResponse): Lote {
+  return {
+    id: r.id,
+    codigo: r.codigo,
+    siloId: r.siloId,
+    siloName: r.siloName,
+    name: r.name,
+    grain: r.grain,
+    tons: r.tons,
+    start: fmtDate(r.startAt),
+    end: r.endAt ? fmtDate(r.endAt) : null,
+    days: r.days,
+    status: r.status,
+    score: r.score,
+    alertsResolved: r.alertsResolved,
+    avg: { co2: r.avgCo2, temp: r.avgTemp, hum: r.avgHum },
+  };
+}
+
 interface AppDataContextValue {
   silos: Silo[];
+  lotes: Lote[];
   alerts: SiloAlert[];
   notification: string | null;
   profile: Profile;
@@ -113,6 +158,8 @@ interface AppDataContextValue {
   updateSilo: (id: number, payload: SiloUpdatePayload) => Promise<void>;
   deleteSilo: (id: number) => Promise<void>;
   resolveAlert: (id: number, note?: string, reason?: string) => Promise<void>;
+  iniciarLote: (siloId: number) => Promise<void>;
+  finalizarLote: (id: number) => Promise<void>;
   notify: (msg: string) => void;
   clearNotification: () => void;
   updateProfile: (payload: PerfilUpdatePayload) => Promise<void>;
@@ -123,6 +170,7 @@ const AppDataContext = createContext<AppDataContextValue | null>(null);
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [silos, setSilos] = useState<Silo[]>([]);
+  const [lotes, setLotes] = useState<Lote[]>([]);
   const [alerts, setAlerts] = useState<SiloAlert[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
@@ -130,10 +178,11 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadAll = async () => {
-    const [p, s, a] = await Promise.all([perfilApi.get(), siloApi.list(), alertaApi.list()]);
+    const [p, s, a, l] = await Promise.all([perfilApi.get(), siloApi.list(), alertaApi.list(), loteApi.list()]);
     setProfile(mapProfile(p));
     setSilos(s.map(mapSilo));
     setAlerts(a.map(mapAlert));
+    setLotes(l.map(mapLote));
   };
 
   useEffect(() => {
@@ -169,6 +218,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     await clearToken();
     setIsAuthenticated(false);
     setSilos([]);
+    setLotes([]);
     setAlerts([]);
     setProfile(EMPTY_PROFILE);
   };
@@ -194,6 +244,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setAlerts((prev) => prev.map((a) => (a.id === id ? mapAlert(updated) : a)));
   };
 
+  const iniciarLote = async (siloId: number) => {
+    const created = await loteApi.iniciar(siloId);
+    setLotes((prev) => [mapLote(created), ...prev]);
+  };
+
+  const finalizarLote = async (id: number) => {
+    const updated = await loteApi.finalizar(id);
+    setLotes((prev) => prev.map((l) => (l.id === id ? mapLote(updated) : l)));
+  };
+
   const notify = (msg: string) => setNotification(msg);
   const clearNotification = () => setNotification(null);
 
@@ -206,6 +266,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     <AppDataContext.Provider
       value={{
         silos,
+        lotes,
         alerts,
         notification,
         profile,
@@ -218,6 +279,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         updateSilo,
         deleteSilo,
         resolveAlert,
+        iniciarLote,
+        finalizarLote,
         notify,
         clearNotification,
         updateProfile,

@@ -27,4 +27,13 @@ public class AlertaRepository : IAlertaRepository
     public Task<Alert?> GetByIdForUserAsync(int id, int userId, CancellationToken ct = default) =>
         _db.Alerts.Include(a => a.Silo)
             .FirstOrDefaultAsync(a => a.Id == id && a.Silo.UserId == userId, ct);
+
+    public Task<int> CountResolvedAsync(int siloId, DateTime from, DateTime to, CancellationToken ct = default) =>
+        _db.Alerts.CountAsync(
+            a => a.SiloId == siloId
+                && a.Status == "resolved"
+                && a.ResolvedAt != null
+                && a.ResolvedAt >= from
+                && a.ResolvedAt <= to,
+            ct);
 }

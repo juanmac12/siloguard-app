@@ -46,6 +46,25 @@ export interface PagedResponse<T> {
   totalPages: number;
 }
 
+export interface LoteResponse {
+  id: number;
+  codigo: string;
+  siloId: number;
+  siloName: string;
+  name: string;
+  grain: string;
+  tons: number;
+  startAt: string;
+  endAt?: string | null;
+  days: number;
+  status: "monitoring" | "finalized";
+  score: number;
+  alertsResolved: number;
+  avgCo2: number;
+  avgTemp: number;
+  avgHum: number;
+}
+
 export interface AlertaResponse {
   id: number;
   siloId: number;
