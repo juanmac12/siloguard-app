@@ -155,4 +155,4 @@ curl -s http://localhost:5210/api/silos -H "Authorization: Bearer $TOKEN" | jq l
 
 El frontend (`SiloGuard/src/`) ya consume esta API real (`AppDataContext.tsx`, sin mock).
 Registro usa Firebase para crear la cuenta y verificar el email; login llama solo a esta
-API. Ver la sección "Auth híbrida" en `../CLAUDE.md` para el detalle completo.
+API. Ver la sección "Auth híbrida" en `../ARQUITECTURA.md` para el detalle completo.
