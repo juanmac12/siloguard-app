@@ -11,7 +11,11 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Spacing, FontSize, ThemeColors, Radius, FontWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { ListItem, Icon } from "../../components";
+import { ListItem, Icon, OfflineBanner } from "../../components";
+
+// TODO: reemplazar por detección real de conectividad (ej. @react-native-community/netinfo).
+// Por ahora el banner queda listo en UI pero oculto (isOffline siempre false).
+const MOCK_IS_OFFLINE = false;
 
 const FARM_NAME = "Estancia La Esperanza";
 
@@ -80,6 +84,8 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner offline={MOCK_IS_OFFLINE} />
+
       {/* Header */}
       <View style={styles.header}>
         <View>

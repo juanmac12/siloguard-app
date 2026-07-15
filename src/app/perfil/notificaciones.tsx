@@ -159,7 +159,7 @@ export default function NotificacionesScreen() {
           <NRow
             icon="moon"
             label="Silenciar de noche"
-            desc="Las alertas críticas se envían siempre."
+            desc="Las alertas críticas se envían siempre, incluso en horario de silencio."
             checked={settings.nightSilence}
             onChange={(v) => set("nightSilence", v)}
             colors={colors}

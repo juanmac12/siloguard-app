@@ -62,16 +62,12 @@ export default function PasaporteScreen() {
   const finCount = allLotes.filter((l) => l.status === "finalized").length;
   const counts: Record<TabId, number> = { activos: monCount, certificados: finCount };
 
-  const emptyTitle = query
-    ? "Sin resultados"
-    : tab === "activos"
-    ? "No hay lotes en monitoreo"
-    : "Aún no hay certificados";
+  const emptyTitle = query ? "Sin resultados" : "No hay lotes";
   const emptySub = query
     ? `Ningún lote coincide con "${query}".`
     : tab === "activos"
-    ? "Iniciá un lote desde el detalle de un silo."
-    : "Los certificados aparecen acá cuando se finaliza un lote.";
+    ? "No hay lotes en monitoreo. Iniciá uno desde el detalle de un silo."
+    : "Aún no se emitieron certificados.";
 
   return (
     <View style={styles.container}>

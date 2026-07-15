@@ -156,13 +156,22 @@ export default function DetalleAlertaScreen() {
       {/* Action bar */}
       {!isResolved && (
         <View style={[styles.actionBar, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
-          <TouchableOpacity
-            onPress={() => router.push(`/historial/${alerta.siloId}` as any)}
-            style={[styles.secBtn, { borderColor: colors.borderDefault }]}
-          >
-            <Icon name="trending-up" size={16} color={colors.textPrimary} />
-            <Text style={[styles.secBtnText, { color: colors.textPrimary }]}>Ver historial</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => router.push(`/historial/${alerta.siloId}` as any)}
+              style={[styles.secBtn, { flex: 1, borderColor: colors.borderDefault }]}
+            >
+              <Icon name="trending-up" size={16} color={colors.textPrimary} />
+              <Text style={[styles.secBtnText, { color: colors.textPrimary }]}>Ver historial</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push(`/contacto-tecnico?alertaId=${alerta.id}` as any)}
+              style={[styles.secBtn, { flex: 1, borderColor: colors.borderDefault }]}
+            >
+              <Icon name="phone" size={16} color={colors.textPrimary} />
+              <Text style={[styles.secBtnText, { color: colors.textPrimary }]}>Contactar técnico</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             onPress={() => setModalOpen(true)}
             disabled={done}

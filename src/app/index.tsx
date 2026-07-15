@@ -91,7 +91,7 @@ export default function SplashScreen() {
   // antes de decidir a dónde navegar.
   useEffect(() => {
     if (!minDelayDone || loading) return;
-    router.replace(isAuthenticated ? "/(tabs)/dashboard" : "/login");
+    router.replace(isAuthenticated ? "/(tabs)/dashboard" : "/welcome");
   }, [minDelayDone, loading, isAuthenticated]);
 
   const spin = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
@@ -113,9 +113,6 @@ export default function SplashScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={[styles.tagline, { color: colors.textMuted }]}>
-          Monitoreo inteligente de granos
-        </Text>
         {/* Spinner fino (igual que el DS: borde con un lado verde) */}
         <Animated.View style={[styles.spinner, { borderTopColor: colors.primary, transform: [{ rotate: spin }] }]} />
       </View>

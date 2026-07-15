@@ -219,7 +219,7 @@ export default function PerfilScreen() {
           <MRow
             icon="target"
             label="Umbrales de alerta"
-            onPress={() => Alert.alert("Próximamente", "Configuración de umbrales en breve.")}
+            onPress={() => router.push("/umbrales")}
             colors={colors}
           />
           <MRow
@@ -231,7 +231,7 @@ export default function PerfilScreen() {
           <MRow
             icon="refresh-cw"
             label="Repetir tutorial"
-            onPress={() => Alert.alert("Tutorial", "Función disponible próximamente.")}
+            onPress={() => router.push("/tutorial")}
             colors={colors}
             last
           />

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Pressable,
+  StyleSheet, Pressable, Modal,
 } from "react-native";
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -9,7 +9,12 @@ import { Spacing, ThemeColors, Radius, FontSize } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { siloApi } from "../../services/siloApi";
-import { Icon, AlertCard, StatusBadge, Button } from "../../components";
+import { Icon, AlertCard, StatusBadge, Button, DeviceOfflineBanner } from "../../components";
+
+// TODO: reemplazar por heartbeat real del dispositivo cuando el backend lo exponga.
+// Por ahora el banner queda listo en UI pero oculto (siempre false).
+const MOCK_DEVICE_OFFLINE = false;
+const MOCK_DEVICE_OFFLINE_MINUTES = 0;
 
 /* ── Sparkline con react-native-svg ── */
 function Sparkline({ data, color = "#22C55E", height = 60 }: { data: number[]; color?: string; height?: number }) {
@@ -103,6 +108,8 @@ export default function SiloScreen() {
   const [tab, setTab] = useState<"info" | "alertas">("info");
   const [menuOpen, setMenuOpen] = useState(false);
   const [loteLoading, setLoteLoading] = useState(false);
+  const [iniciarSheetOpen, setIniciarSheetOpen] = useState(false);
+  const [finalizarConfirmOpen, setFinalizarConfirmOpen] = useState(false);
 
   const silo = silos.find((s) => s.id === Number(id));
 
@@ -124,6 +131,7 @@ export default function SiloScreen() {
     try {
       await iniciarLote(silo.id);
       notify("Lote iniciado — el silo está en monitoreo");
+      setIniciarSheetOpen(false);
     } catch (e: any) {
       notify(e?.message ?? "No se pudo iniciar el lote");
     } finally {
@@ -137,6 +145,7 @@ export default function SiloScreen() {
     try {
       await finalizarLote(activeLote.id);
       notify("Lote finalizado — pasaporte generado");
+      setFinalizarConfirmOpen(false);
     } catch (e: any) {
       notify(e?.message ?? "No se pudo finalizar el lote");
     } finally {
@@ -176,7 +185,7 @@ export default function SiloScreen() {
                 <Text style={[styles.menuText, { color: colors.textPrimary }]}>Editar silo</Text>
               </Pressable>
               <View style={[styles.menuDivider, { backgroundColor: colors.borderDefault }]} />
-              <Pressable onPress={() => { setMenuOpen(false); }} style={styles.menuItem}>
+              <Pressable onPress={() => { setMenuOpen(false); router.push(`/umbrales/${silo.id}` as any); }} style={styles.menuItem}>
                 <Icon name="target" size={16} color={colors.textSecondary} />
                 <Text style={[styles.menuText, { color: colors.textPrimary }]}>Configurar umbrales</Text>
               </Pressable>
@@ -192,9 +201,9 @@ export default function SiloScreen() {
 
       {/* Sensor grid */}
       <View style={styles.sensorRow}>
-        <SensorCard kind="temp"     value={silo.temp} unit="°C"  label="Temp."   tone={tempTone} onPress={() => router.push(`/historial/${silo.id}` as any)} colors={colors} />
-        <SensorCard kind="humidity" value={silo.hum}  unit="%"   label="Humedad" tone={humTone}  onPress={() => router.push(`/historial/${silo.id}` as any)} colors={colors} />
-        <SensorCard kind="co2"      value={silo.co2}  unit="ppm" label="CO₂"     tone={co2Tone}  onPress={() => router.push(`/historial/${silo.id}` as any)} colors={colors} />
+        <SensorCard kind="temp"     value={silo.temp} unit="°C"  label="Temp."   tone={tempTone} onPress={() => router.push({ pathname: "/historial/[id]", params: { id: String(silo.id), variable: "temp" } } as any)} colors={colors} />
+        <SensorCard kind="humidity" value={silo.hum}  unit="%"   label="Humedad" tone={humTone}  onPress={() => router.push({ pathname: "/historial/[id]", params: { id: String(silo.id), variable: "hum" } } as any)} colors={colors} />
+        <SensorCard kind="co2"      value={silo.co2}  unit="ppm" label="CO₂"     tone={co2Tone}  onPress={() => router.push({ pathname: "/historial/[id]", params: { id: String(silo.id), variable: "co2" } } as any)} colors={colors} />
       </View>
 
       {/* Tabs */}
@@ -212,6 +221,10 @@ export default function SiloScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {tab === "info" ? (
           <>
+            {MOCK_DEVICE_OFFLINE && (
+              <DeviceOfflineBanner offlineMinutes={MOCK_DEVICE_OFFLINE_MINUTES} siloId={silo.id} />
+            )}
+
             {/* Pasaporte de calidad — iniciar / finalizar lote */}
             <Text style={[LBL_STYLE, { color: colors.textSecondary }]}>Pasaporte de calidad</Text>
             <View style={[styles.infoCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, padding: 14, gap: 12, marginBottom: 16 }]}>
@@ -224,14 +237,14 @@ export default function SiloScreen() {
                     </View>
                     <StatusBadge tone="ok" label="En monitoreo" />
                   </View>
-                  <Button variant="secondary" fullWidth loading={loteLoading} onPress={onFinalizarLote}>Finalizar y generar pasaporte</Button>
+                  <Button variant="secondary" fullWidth onPress={() => setFinalizarConfirmOpen(true)}>Finalizar y generar pasaporte</Button>
                 </>
               ) : (
                 <>
                   <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
                     Este silo no tiene un lote en monitoreo. Iniciá uno para generar su pasaporte de calidad.
                   </Text>
-                  <Button variant="primary" fullWidth loading={loteLoading} onPress={onIniciarLote}>Iniciar lote</Button>
+                  <Button variant="primary" fullWidth onPress={() => setIniciarSheetOpen(true)}>Iniciar lote</Button>
                 </>
               )}
             </View>
@@ -300,6 +313,63 @@ export default function SiloScreen() {
           )
         )}
       </ScrollView>
+
+      {/* Iniciar lote — bottom sheet de confirmación */}
+      <Modal visible={iniciarSheetOpen} transparent animationType="slide" onRequestClose={() => setIniciarSheetOpen(false)}>
+        <Pressable style={styles.overlay} onPress={() => setIniciarSheetOpen(false)} />
+        <View style={[styles.sheet, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
+          <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Iniciar lote</Text>
+          <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
+            Se va a monitorear este silo hasta que finalices el lote. El nombre y los promedios se calculan automáticamente.
+          </Text>
+          <View style={[styles.sheetInfoRow, { borderTopColor: colors.borderDefault }]}>
+            <Text style={[styles.infoKey, { color: colors.textSecondary }]}>Silo</Text>
+            <Text style={[styles.infoVal, { color: colors.textPrimary }]}>{silo.name}</Text>
+          </View>
+          <View style={[styles.sheetInfoRow, { borderTopColor: colors.borderDefault }]}>
+            <Text style={[styles.infoKey, { color: colors.textSecondary }]}>Grano</Text>
+            <Text style={[styles.infoVal, { color: colors.textPrimary }]}>{silo.grain}</Text>
+          </View>
+          <View style={[styles.sheetInfoRow, { borderTopColor: colors.borderDefault }]}>
+            <Text style={[styles.infoKey, { color: colors.textSecondary }]}>Tonelaje</Text>
+            <Text style={[styles.infoVal, { color: colors.textPrimary }]}>{silo.tons} t</Text>
+          </View>
+          <Button variant="primary" fullWidth loading={loteLoading} onPress={onIniciarLote} style={{ marginTop: 16 }}>
+            Iniciar monitoreo
+          </Button>
+          <TouchableOpacity onPress={() => setIniciarSheetOpen(false)} style={styles.modalCancelBtn}>
+            <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>Cancelar</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Finalizar lote — confirmación centrada */}
+      <Modal visible={finalizarConfirmOpen} transparent animationType="fade" onRequestClose={() => setFinalizarConfirmOpen(false)}>
+        <Pressable style={styles.overlay} onPress={() => setFinalizarConfirmOpen(false)} />
+        <View style={styles.modalCenter}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
+            <View style={[styles.modalIcon, { backgroundColor: colors.statusWarnTint }]}>
+              <Icon name="shield" size={24} color={colors.statusWarn} />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Finalizar lote</Text>
+            <Text style={[styles.modalSub, { color: colors.textSecondary }]}>
+              Se cerrará el seguimiento y se generará el pasaporte con el score histórico. Esta acción no se puede deshacer.
+            </Text>
+            <TouchableOpacity
+              onPress={onFinalizarLote}
+              disabled={loteLoading}
+              style={[styles.modalBtn, { backgroundColor: colors.actionPrimary, opacity: loteLoading ? 0.6 : 1 }]}
+            >
+              <Text style={[styles.modalBtnText, { color: colors.actionPrimaryText }]}>
+                {loteLoading ? "Finalizando…" : "Sí, finalizar lote"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setFinalizarConfirmOpen(false)} style={styles.modalCancelBtn}>
+              <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -362,4 +432,25 @@ const makeStyles = (c: ThemeColors) =>
     emptyAlerts: { alignItems: "center", paddingTop: 48, gap: 10 },
     emptyTitle: { fontSize: 17, fontWeight: "600" },
     emptySub: { fontSize: 13, textAlign: "center" },
+
+    overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
+    sheet: {
+      position: "absolute", left: 0, right: 0, bottom: 0,
+      borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+      borderWidth: 1, borderBottomWidth: 0,
+      padding: 20, paddingBottom: 36,
+    },
+    sheetTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
+    sheetSub: { fontSize: 13, lineHeight: 19, marginBottom: 12 },
+    sheetInfoRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderTopWidth: 1 },
+
+    modalCenter: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+    modalCard: { width: "100%", borderRadius: Radius.xl, borderWidth: 1, padding: 20, alignItems: "center", gap: 8 },
+    modalIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+    modalTitle: { fontSize: 17, fontWeight: "700" },
+    modalSub: { fontSize: 13, textAlign: "center", lineHeight: 19, marginBottom: 8 },
+    modalBtn: { width: "100%", borderRadius: Radius.md, paddingVertical: 14, alignItems: "center" },
+    modalBtnText: { fontSize: 15, fontWeight: "700" },
+    modalCancelBtn: { paddingVertical: 12 },
+    modalCancelText: { fontSize: 14, fontWeight: "600" },
   });
