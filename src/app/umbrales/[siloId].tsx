@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   readingDot: { width: 6, height: 6, borderRadius: 3 },
   readingText: { fontSize: 12, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
   divider: { width: 1, alignSelf: "stretch", marginHorizontal: 10 },
-  warnBox: { flexDirection: "row", gap: 7, padding: 9, borderRadius: 8, borderWidth: 1, alignItems: "flex-start" },
+  warnBox: { flexDirection: "row", gap: 7, padding: 9, borderRadius: Radius.md, borderWidth: 1, alignItems: "flex-start" },
   warnText: { flex: 1, fontSize: 11, lineHeight: 16, fontFamily: fontFamilyForWeight(FontWeight.regular) },
   resetRow: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-end", marginTop: -4 },
   resetText: { fontSize: 12, fontFamily: fontFamilyForWeight(FontWeight.regular) },

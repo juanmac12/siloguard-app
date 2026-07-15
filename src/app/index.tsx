@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { SvgXml } from "react-native-svg";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAppData } from "../contexts/AppDataContext";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { Type, FontFamily } from "../constants/Theme";
 
 const LOGO_SVG = `<svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -38,28 +39,33 @@ export default function SplashScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { isAuthenticated, onboardingDone, loading } = useAppData();
+  const reducedMotion = useReducedMotion();
   const [minDelayDone, setMinDelayDone] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: reducedMotion ? 0 : 400, useNativeDriver: true }).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.55, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-      ])
-    ).start();
+    // Pulso y giro son loops infinitos — se saltean con "reducir movimiento"
+    // (el spinner queda fijo, la señal de carga sigue siendo el fade-in).
+    if (!reducedMotion) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.55, duration: 900, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        ])
+      ).start();
 
-    Animated.loop(
-      Animated.timing(spinAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.linear })
-    ).start();
+      Animated.loop(
+        Animated.timing(spinAnim, { toValue: 1, duration: 800, useNativeDriver: true, easing: Easing.linear })
+      ).start();
+    }
 
     const timer = setTimeout(() => setMinDelayDone(true), 1800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (!minDelayDone || loading) return;

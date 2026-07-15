@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Size = 'sm' | 'md';
 
@@ -29,12 +30,13 @@ export function Toggle({
   disabled?: boolean;
 }) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   const d = DIMS[size];
   const anim = useRef(new Animated.Value(checked ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: checked ? 1 : 0, duration: 150, useNativeDriver: false }).start();
-  }, [checked, anim]);
+    Animated.timing(anim, { toValue: checked ? 1 : 0, duration: reducedMotion ? 0 : 150, useNativeDriver: false }).start();
+  }, [checked, anim, reducedMotion]);
 
   const track = anim.interpolate({ inputRange: [0, 1], outputRange: [colors.surfaceInput, colors.actionPrimary] });
   const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [0, d.w - d.thumb - d.pad * 2] });
