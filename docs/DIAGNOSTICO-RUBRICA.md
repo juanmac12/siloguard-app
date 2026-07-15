@@ -1,5 +1,10 @@
 # SiloGuard — Diagnóstico contra la rúbrica del TP Integrador
 
+> **⚡ SUPERADO (2026-07-15):** los gaps de este diagnóstico ya fueron cerrados —
+> ABM de Umbrales (4.2), filtro de alertas en la API (3.4), 2ª N-N `LoteDestinatarios`
+> (1.2), docs actualizados y suite de tests. Ver `docs/CHECKLIST-DEFENSA.md` para el
+> estado final y la guía de demo. Se conserva este archivo como evidencia del proceso.
+
 > Comparación del backend actual contra
 > `Integrador-Rubrica-ParaAlumnos-Programacion3-TUP-2026-RESISTENCIA.xlsx`
 > (rúbrica de 100 puntos, 6 partes). Análisis de código real (controllers, services,
