@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Onboarding" description="Bloque 2 — Solicitud de permisos, Vincular lanza (QR + WiFi + asignación), Tutorial walkthrough" -->
+<helmet>
+  <script src="./ds-base.js"></script>
+  <style>
+    @keyframes sg-spin { to { transform: rotate(360deg); } }
+    body { margin: 0; }
+    a { color: var(--text-link); text-decoration: underline; }
+    a:hover { color: var(--action-primary-hover); }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; background:#000; display:flex; align-items:center; justify-content:center; padding:32px; box-sizing:border-box;">
+<div style="width:390px; height:844px; flex-shrink:0; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; position:relative; font-family:var(--font-sans); border-radius:36px; border:1px solid var(--border-default); box-shadow:0 30px 80px rgba(0,0,0,0.6);">
+
+  <dc-import name="AuthStatusBar" hint-size="390px,44px"></dc-import>
+
+  <!-- ===================== Pantalla 7 · Solicitud de permisos ===================== -->
+  <sc-if value="{{ screenIsPermisos }}" hint-placeholder-val="{{ true }}">
+    <dc-import name="AuthHeader" title="Notificaciones" show-back="{{ false }}" hint-size="390px,54px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:32px 24px 32px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <div style="width:88px; height:88px; border-radius:999px; background:var(--green-tint); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(34,197,94,0.3); margin-bottom:24px; flex-shrink:0;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="bell" size="36" color="var(--green)" hint-size="36px,36px"></x-import>
+      </div>
+      <h1 style="margin:0 0 12px; font-family:var(--font-sans); font-size:var(--text-h1); line-height:var(--lh-h1); font-weight:700; letter-spacing:var(--ls-h1); color:var(--text-primary);">Activá las notificaciones</h1>
+      <p style="margin:0; max-width:280px; font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); color:var(--text-secondary);">SiloGuard te avisa con al menos 48 hs de anticipación cuando detecta un problema en tu grano. Sin notificaciones, podrías perderte una alerta crítica.</p>
+
+      <sc-if value="{{ permisosShowDeniedMsg }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:16px 0 0; max-width:280px; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-warn);">Podés activarlas después desde Configuración.</p>
+      </sc-if>
+
+      <div style="flex:1; min-height:16px;"></div>
+
+      <div style="width:100%; flex-shrink:0;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ permisosLoading }}" on-click="{{ requestPermiso }}" hint-size="100%,48px">{{ permisosButtonLabel }}</x-import>
+      </div>
+      <button onClick="{{ skipPermiso }}" style="margin-top:16px; background:none; border:none; padding:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary); text-decoration:underline; cursor:pointer; flex-shrink:0;">Ahora no</button>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Pantalla 8a · Vincular Lanza — Escaneo QR ===================== -->
+  <sc-if value="{{ screenIsVincularQr }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Vincular lanza" show-back="{{ true }}" on-back="{{ backFromQr }}" hint-size="390px,54px"></dc-import>
+    <dc-import name="OnboardingStepProgress" step="{{ 1 }}" total="{{ 2 }}" caption="Paso 1 de 2 — Escaneo QR" hint-size="390px,64px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; display:flex; flex-direction:column; gap:16px;">
+
+      <sc-if value="{{ cameraDenied }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; padding:28px 16px; background:var(--surface-card); border:1px solid var(--border-default); border-radius:var(--radius-lg);">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="camera" size="30" color="var(--text-secondary)" hint-size="30px,30px"></x-import>
+          <p style="margin:0; font-family:var(--font-sans); font-size:15px; font-weight:600; color:var(--text-primary);">No tenés acceso a la cámara</p>
+          <p style="margin:0; max-width:260px; font-family:var(--font-sans); font-size:var(--text-caption); line-height:var(--lh-caption); color:var(--text-secondary);">Activá el permiso de cámara desde los ajustes de tu teléfono, o ingresá el código manualmente.</p>
+          <div style="width:100%; margin-top:4px;">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="secondary" full-width="{{ true }}" hint-size="100%,44px">Abrir ajustes del sistema</x-import>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ cameraAllowed }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center; padding:4px 0 0;">
+          <p style="margin:0 0 6px; font-family:var(--font-sans); font-size:16px; font-weight:600; color:var(--text-primary);">Apuntá la cámara al código QR</p>
+          <p style="margin:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary);">El código está impreso en el lateral de tu lanza SiloGuard.</p>
+        </div>
+
+        <div style="position:relative; background:#000; border-radius:var(--radius-lg); overflow:hidden; aspect-ratio:1; border:1px solid var(--border-default);">
+          <div style="position:absolute; inset:0; background:radial-gradient(ellipse at 60% 40%, #10200f 0%, #060606 100%); display:flex; align-items:center; justify-content:center;">
+            <sc-if value="{{ qrIsIdle }}" hint-placeholder-val="{{ true }}">
+              <span style="font-family:var(--font-sans); font-size:12px; color:rgba(255,255,255,0.25);">Vista de cámara</span>
+            </sc-if>
+            <sc-if value="{{ qrIsScanning }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:999px; border:3px solid var(--action-primary); border-top-color:transparent; animation:sg-spin 0.8s linear infinite;"></div>
+                <span style="font-family:var(--font-sans); font-size:13px; color:var(--text-secondary);">Leyendo QR…</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ qrIsOk }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                <div style="width:56px; height:56px; border-radius:999px; background:rgba(34,197,94,0.15); border:2px solid var(--action-primary); display:flex; align-items:center; justify-content:center;">
+                  <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check" size="28" color="var(--green)" hint-size="28px,28px"></x-import>
+                </div>
+                <span style="font-family:var(--font-sans); font-size:14px; color:var(--green); font-weight:600;">QR detectado</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ qrIsInvalid }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                <div style="width:56px; height:56px; border-radius:999px; background:rgba(239,68,68,0.12); border:2px solid var(--status-critical); display:flex; align-items:center; justify-content:center;">
+                  <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="x-circle" size="28" color="var(--status-critical)" hint-size="28px,28px"></x-import>
+                </div>
+                <span style="font-family:var(--font-sans); font-size:14px; color:var(--status-critical); font-weight:600;">Código inválido</span>
+              </div>
+            </sc-if>
+          </div>
+          <div style="position:absolute; top:16px; left:16px; width:22px; height:22px; border-top:3px solid var(--action-primary); border-left:3px solid var(--action-primary);"></div>
+          <div style="position:absolute; top:16px; right:16px; width:22px; height:22px; border-top:3px solid var(--action-primary); border-right:3px solid var(--action-primary);"></div>
+          <div style="position:absolute; bottom:16px; left:16px; width:22px; height:22px; border-bottom:3px solid var(--action-primary); border-left:3px solid var(--action-primary);"></div>
+          <div style="position:absolute; bottom:16px; right:16px; width:22px; height:22px; border-bottom:3px solid var(--action-primary); border-right:3px solid var(--action-primary);"></div>
+        </div>
+
+        <sc-if value="{{ qrIsInvalid }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-critical); text-align:center;">Este código no corresponde a una lanza SiloGuard. Intentá de nuevo.</p>
+        </sc-if>
+
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" on-click="{{ qrButtonAction }}" disabled="{{ qrIsScanning }}" hint-size="100%,48px">{{ qrButtonLabel }}</x-import>
+      </sc-if>
+
+      <button onClick="{{ toggleManualQr }}" style="background:none; border:none; padding:0; font-family:var(--font-sans); font-size:13px; color:var(--text-secondary); text-decoration:underline; text-underline-offset:3px; cursor:pointer; text-align:center; flex-shrink:0;">{{ manualQrToggleLabel }}</button>
+
+      <sc-if value="{{ showManualQr }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; gap:12px; padding-top:4px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="CÓDIGO DE LA LANZA" placeholder="SG-0000-0000" value="{{ manualQrCode }}" on-change="{{ setManualQrCode }}" hint-size="100%,68px"></x-import>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="secondary" full-width="{{ true }}" disabled="{{ manualQrSubmitDisabled }}" on-click="{{ submitManualQr }}" hint-size="100%,44px">Validar código</x-import>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Pantalla 8b · Vincular Lanza — Conexión WiFi ===================== -->
+  <sc-if value="{{ screenIsVincularWifi }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Vincular lanza" show-back="{{ true }}" on-back="{{ backFromWifi }}" hint-size="390px,54px"></dc-import>
+    <dc-import name="OnboardingStepProgress" step="{{ 1 }}" total="{{ 2 }}" caption="Paso 1 de 2 — Conexión WiFi" hint-size="390px,64px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; display:flex; flex-direction:column; gap:16px;">
+
+      <div style="text-align:center; padding:4px 0 0;">
+        <div style="width:52px; height:52px; border-radius:999px; background:var(--green-tint); border:1px solid rgba(34,197,94,0.25); display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="wifi" size="24" color="var(--green)" hint-size="24px,24px"></x-import>
+        </div>
+        <p style="margin:0 0 6px; font-family:var(--font-sans); font-size:16px; font-weight:600; color:var(--text-primary);">Conectá la lanza al WiFi</p>
+        <p style="margin:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary);">Seleccioná la red del campo para que la lanza pueda transmitir datos.</p>
+      </div>
+
+      <div style="background:var(--surface-card); border:1px solid var(--border-default); border-radius:var(--radius-lg); overflow:hidden;">
+        <sc-for list="{{ wifiNetworks }}" as="net" hint-placeholder-count="4">
+          <sc-if value="{{ net.isSelected }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ net.onClick }}" style="display:flex; align-items:center; gap:12px; width:100%; padding:13px 14px; background:var(--green-tint); border:none; border-bottom:1px solid var(--border-default); cursor:pointer; text-align:left;">
+              <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="wifi" size="16" color="var(--green)" hint-size="16px,16px"></x-import>
+              <span style="flex:1; font-family:var(--font-sans); font-size:14px; font-weight:600; color:var(--text-primary);">{{ net.name }}</span>
+              <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check" size="16" color="var(--green)" hint-size="16px,16px"></x-import>
+            </button>
+          </sc-if>
+          <sc-if value="{{ net.isNotSelected }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ net.onClick }}" style="display:flex; align-items:center; gap:12px; width:100%; padding:13px 14px; background:transparent; border:none; border-bottom:1px solid var(--border-default); cursor:pointer; text-align:left;">
+              <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="wifi" size="16" color="var(--text-secondary)" hint-size="16px,16px"></x-import>
+              <span style="flex:1; font-family:var(--font-sans); font-size:14px; color:var(--text-secondary);">{{ net.name }}</span>
+            </button>
+          </sc-if>
+        </sc-for>
+      </div>
+
+      <button onClick="{{ toggleManualSsid }}" style="background:none; border:none; padding:0; font-family:var(--font-sans); font-size:13px; color:var(--text-secondary); text-decoration:underline; text-underline-offset:3px; cursor:pointer; text-align:center; flex-shrink:0;">{{ manualSsidToggleLabel }}</button>
+
+      <sc-if value="{{ showManualSsid }}" hint-placeholder-val="{{ false }}">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="NOMBRE DE LA RED (SSID)" placeholder="Ej: Red_del_campo" value="{{ manualSsid }}" on-change="{{ setManualSsid }}" hint-size="100%,68px"></x-import>
+      </sc-if>
+
+      <sc-if value="{{ wifiShowPasswordField }}" hint-placeholder-val="{{ false }}">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="CONTRASEÑA DE LA RED" placeholder="••••••••" type="{{ wifiPasswordFieldType }}" value="{{ wifiPassword }}" on-change="{{ setWifiPassword }}" trailing-icon="{{ wifiEyeIcon }}" disabled="{{ wifiConnecting }}" hint-size="100%,68px"></x-import>
+      </sc-if>
+
+      <sc-if value="{{ wifiHasError }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-critical);">{{ wifiErrorMsg }}</p>
+      </sc-if>
+
+      <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ wifiSubmitDisabled }}" on-click="{{ connectWifi }}" hint-size="100%,48px">{{ wifiButtonLabel }}</x-import>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Pantalla 9 · Vincular Lanza — Asignación de silo ===================== -->
+  <sc-if value="{{ screenIsAsignacion }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Vincular lanza" show-back="{{ true }}" on-back="{{ backFromAsignacion }}" hint-size="390px,54px"></dc-import>
+    <dc-import name="OnboardingStepProgress" step="{{ 2 }}" total="{{ 2 }}" caption="Paso 2 de 2 — Datos del silo" hint-size="390px,64px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; display:flex; flex-direction:column; gap:16px;">
+
+      <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--green-tint); border:1px solid rgba(34,197,94,0.25); border-radius:var(--radius-lg); flex-shrink:0;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="18" color="var(--green)" hint-size="18px,18px"></x-import>
+        <span style="font-family:var(--font-sans); font-size:13px; font-weight:600; color:var(--green);">Lanza conectada correctamente</span>
+      </div>
+
+      <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="NOMBRE DEL SILO" placeholder="Ej: Silo Norte, Bolsa 3" hint="Podés cambiarlo en cualquier momento." value="{{ asigNombre }}" on-change="{{ setAsigNombre }}" disabled="{{ asigLoading }}" hint-size="100%,68px"></x-import>
+
+      <div>
+        <span style="display:block; margin:0 0 8px; font-family:var(--font-sans); font-size:var(--text-caption); letter-spacing:var(--ls-caption); color:var(--text-secondary); text-transform:uppercase;">Tipo de almacenamiento</span>
+        <div style="display:flex; gap:8px;">
+          <sc-for list="{{ tipoOptions }}" as="opt" hint-placeholder-count="2">
+            <sc-if value="{{ opt.isActive }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ opt.onClick }}" style="flex:1; padding:10px 8px; background:var(--green-tint); border:1px solid var(--action-primary); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-sans); font-size:13px; font-weight:600; cursor:pointer;">{{ opt.label }}</button>
+            </sc-if>
+            <sc-if value="{{ opt.isInactive }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ opt.onClick }}" style="flex:1; padding:10px 8px; background:var(--surface-input); border:1px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-secondary); font-family:var(--font-sans); font-size:13px; font-weight:400; cursor:pointer;">{{ opt.label }}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+
+      <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="TONELAJE ESTIMADO (OPCIONAL)" placeholder="0" hint="En toneladas (tn)" type="number" value="{{ asigTonelaje }}" on-change="{{ setAsigTonelaje }}" disabled="{{ asigLoading }}" hint-size="100%,68px"></x-import>
+
+      <div>
+        <span style="display:block; margin:0 0 8px; font-family:var(--font-sans); font-size:var(--text-caption); letter-spacing:var(--ls-caption); color:var(--text-secondary); text-transform:uppercase;">Tipo de grano (opcional)</span>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <sc-for list="{{ granoOptions }}" as="g" hint-placeholder-count="5">
+            <sc-if value="{{ g.isActive }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ g.onClick }}" style="padding:8px 14px; background:var(--green-tint); border:1px solid var(--action-primary); border-radius:var(--radius-full); color:var(--text-primary); font-family:var(--font-sans); font-size:13px; font-weight:600; cursor:pointer;">{{ g.label }}</button>
+            </sc-if>
+            <sc-if value="{{ g.isInactive }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ g.onClick }}" style="padding:8px 14px; background:var(--surface-input); border:1px solid var(--border-default); border-radius:var(--radius-full); color:var(--text-secondary); font-family:var(--font-sans); font-size:13px; font-weight:400; cursor:pointer;">{{ g.label }}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+        <sc-if value="{{ asigGranoIsOtro }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:8px;">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" placeholder="Escribí el tipo de grano" value="{{ asigGranoCustom }}" on-change="{{ setAsigGranoCustom }}" hint-size="100%,44px"></x-import>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ asigHasError }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-critical);">No pudimos guardar el silo. Verificá tu conexión e intentá de nuevo.</p>
+      </sc-if>
+
+      <div style="margin-top:8px; flex-shrink:0;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ asigSubmitDisabled }}" on-click="{{ submitAsignacion }}" hint-size="100%,48px">{{ asigButtonLabel }}</x-import>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Pantalla 10 · Tutorial walkthrough ===================== -->
+  <sc-if value="{{ screenIsTutorial }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; min-height:0;">
+
+      <!-- mini-dashboard de fondo (no interactivo durante el tutorial) -->
+      <div aria-hidden="true" style="flex:1; display:flex; flex-direction:column; overflow:hidden; pointer-events:none; min-height:0;">
+        <div style="padding:14px 16px 10px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+          <div>
+            <p style="margin:0 0 3px; font-family:var(--font-sans); font-size:12px; color:var(--text-secondary); font-weight:500;">{{ farmNameDisplay }}</p>
+            <h1 style="margin:0; font-family:var(--font-sans); font-size:26px; font-weight:700; letter-spacing:-0.3px; color:var(--text-primary);">Mis silos</h1>
+          </div>
+          <sc-if value="{{ spotlightAlertas }}" hint-placeholder-val="{{ false }}">
+            <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--surface-card); border:1px solid var(--action-primary); box-shadow:0 0 0 4px var(--green-tint); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="bell" size="20" color="var(--text-primary)" hint-size="20px,20px"></x-import>
+            </div>
+          </sc-if>
+          <sc-if value="{{ spotlightAlertasOff }}" hint-placeholder-val="{{ true }}">
+            <div style="width:40px; height:40px; border-radius:var(--radius-md); background:var(--surface-card); border:1px solid var(--border-default); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="bell" size="20" color="var(--text-primary)" hint-size="20px,20px"></x-import>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:0 16px 12px; flex-shrink:0;">
+          <div style="background:var(--surface-card); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 12px;">
+            <div style="font-family:var(--font-sans); font-size:22px; font-weight:700; color:var(--text-primary);">1</div>
+            <div style="font-family:var(--font-sans); font-size:10px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Silos</div>
+          </div>
+          <div style="background:var(--surface-card); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 12px;">
+            <div style="font-family:var(--font-sans); font-size:22px; font-weight:700; color:var(--status-ok);">0</div>
+            <div style="font-family:var(--font-sans); font-size:10px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Alertas</div>
+          </div>
+          <div style="background:var(--surface-card); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 12px;">
+            <div style="font-family:var(--font-sans); font-size:15px; font-weight:700; color:var(--status-ok);">Óptimo</div>
+            <div style="font-family:var(--font-sans); font-size:10px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Estado</div>
+          </div>
+        </div>
+
+        <div style="flex:1; overflow:hidden; padding:0 16px 12px; min-height:0;">
+          <span style="display:block; margin:0 0 8px; font-family:var(--font-sans); font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-secondary);">Tus silos</span>
+
+          <sc-if value="{{ spotlightDashboard }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:var(--radius-lg); box-shadow:0 0 0 3px var(--action-primary), 0 0 24px rgba(34,197,94,0.35);">
+              <x-import component-from-global-scope="SiloGuardDesignSystem_633342.ListItem" tone="ok" title="{{ siloDisplayName }}" subtitle="{{ siloDisplaySubtitle }}" value="{{ 22 }}" value-unit="°C" show-chevron="{{ false }}" hint-size="100%,64px"></x-import>
+            </div>
+          </sc-if>
+          <sc-if value="{{ spotlightDashboardOff }}" hint-placeholder-val="{{ true }}">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.ListItem" tone="ok" title="{{ siloDisplayName }}" subtitle="{{ siloDisplaySubtitle }}" value="{{ 22 }}" value-unit="°C" show-chevron="{{ false }}" hint-size="100%,64px"></x-import>
+          </sc-if>
+
+          <div style="margin-top:10px;">
+            <sc-if value="{{ spotlightHistorial }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:10px; background:var(--surface-card); border:1px solid var(--action-primary); box-shadow:0 0 0 3px var(--green-tint); border-radius:var(--radius-md);">
+                <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="trending-up" size="15" color="var(--action-primary)" hint-size="15px,15px"></x-import>
+                <span style="font-family:var(--font-sans); font-size:13px; font-weight:500; color:var(--action-primary);">Ver historial completo</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ spotlightHistorialOff }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:10px; background:transparent; border:1px solid var(--border-default); border-radius:var(--radius-md);">
+                <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="trending-up" size="15" color="var(--text-secondary)" hint-size="15px,15px"></x-import>
+                <span style="font-family:var(--font-sans); font-size:13px; font-weight:500; color:var(--text-secondary);">Ver historial completo</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{ spotlightPasaporte }}" hint-placeholder-val="{{ false }}">
+          <div style="box-shadow:0 0 0 3px var(--action-primary), 0 0 24px rgba(34,197,94,0.35); flex-shrink:0;">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.NavBar" active="calidad" tabs="{{ navTabs }}" hint-size="390px,80px"></x-import>
+          </div>
+        </sc-if>
+        <sc-if value="{{ spotlightPasaporteOff }}" hint-placeholder-val="{{ true }}">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.NavBar" active="dashboard" tabs="{{ navTabs }}" hint-size="390px,80px"></x-import>
+        </sc-if>
+      </div>
+
+      <!-- overlay del tutorial — la card se ubica cerca de la sección resaltada de cada paso -->
+      <sc-if value="{{ tutorialActive }}" hint-placeholder-val="{{ true }}">
+        <div role="dialog" aria-modal="true" aria-label="Tutorial de bienvenida" style="position:absolute; inset:0; background:rgba(0,0,0,0.6);">
+
+          <sc-if value="{{ cardPositionTop }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; left:20px; right:20px; top:88px;">
+              <dc-import name="TutorialCard" icon="{{ tutorialIconName }}" title="{{ tutorialTitle }}" desc="{{ tutorialDesc }}" step="{{ tutorialStep }}" total="{{ 4 }}" button-label="{{ tutorialButtonLabel }}" on-next="{{ tutorialNext }}" hint-size="350px,280px"></dc-import>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cardPositionMiddle }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute; left:20px; right:20px; top:320px;">
+              <dc-import name="TutorialCard" icon="{{ tutorialIconName }}" title="{{ tutorialTitle }}" desc="{{ tutorialDesc }}" step="{{ tutorialStep }}" total="{{ 4 }}" button-label="{{ tutorialButtonLabel }}" on-next="{{ tutorialNext }}" hint-size="350px,280px"></dc-import>
+            </div>
+          </sc-if>
+          <sc-if value="{{ cardPositionBottom }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; left:20px; right:20px; bottom:110px;">
+              <dc-import name="TutorialCard" icon="{{ tutorialIconName }}" title="{{ tutorialTitle }}" desc="{{ tutorialDesc }}" step="{{ tutorialStep }}" total="{{ 4 }}" button-label="{{ tutorialButtonLabel }}" on-next="{{ tutorialNext }}" hint-size="350px,280px"></dc-import>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- fin del bloque (onboarding completo) -->
+      <sc-if value="{{ tutorialDone }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:32px;">
+          <div style="width:72px; height:72px; border-radius:999px; background:var(--green-tint); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(34,197,94,0.3);">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="34" color="var(--green)" hint-size="34px,34px"></x-import>
+          </div>
+          <h2 style="margin:0; font-family:var(--font-sans); font-size:var(--text-h2); color:var(--text-primary);">Onboarding completado</h2>
+          <p style="margin:0; max-width:260px; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-secondary);">Este bloque termina acá — en la app continuarías al Dashboard interactivo.</p>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="ghost" on-click="{{ resetOnboarding }}" hint-size="200px,44px">Reiniciar demo</x-import>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;initialScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;permisos&quot;,&quot;options&quot;:[&quot;permisos&quot;,&quot;vincular-qr&quot;,&quot;vincular-wifi&quot;,&quot;asignacion&quot;,&quot;tutorial&quot;],&quot;tsType&quot;:&quot;'permisos'|'vincular-qr'|'vincular-wifi'|'asignacion'|'tutorial'&quot;},&quot;forceNotifDenied&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;},&quot;forceCameraDenied&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;},&quot;forceQrInvalid&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;},&quot;forceWifiWrongPassword&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;},&quot;forceLanzaNoResponde&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;},&quot;forceSaveError&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;}}">
+class Component extends DCLogic {
+  state = (() => {
+    // Nota (Etapa 2 de 3): 'tutorial' (pantalla 10) llega en la Etapa 3 —
+    // goToTutorial() abajo es el punto de enganche a redirigir cuando exista.
+    const initial = this.props.initialScreen || 'permisos';
+    const screen = initial.startsWith('vincular') ? 'vincular' : initial;
+    const vincularSub = initial === 'vincular-wifi' ? 'wifi' : 'qr';
+    return {
+    screen,
+    permisosStatus: 'idle', // idle | loading | denied-msg
+
+    vincularSub, // qr | wifi
+    qrStatus: 'idle', // idle | scanning | ok | invalid
+    showManualQr: false,
+    manualQrCode: '',
+
+    selectedWifiId: null,
+    showManualSsid: false,
+    manualSsid: '',
+    wifiPassword: '',
+    wifiShowPassword: false,
+    wifiStatus: 'idle', // idle | connecting | error-password | error-unreachable
+
+    asigNombre: '',
+    asigTipo: 'Silo fijo',
+    asigTonelaje: '',
+    asigGrano: 'Soja',
+    asigGranoCustom: '',
+    asigStatus: 'idle', // idle | loading | error
+
+    tutorialStep: 0,
+    tutorialDone: false,
+    };
+  })();
+
+  componentWillUnmount() {
+    clearTimeout(this._permisosTimer);
+    clearTimeout(this._permisosAdvanceTimer);
+    clearTimeout(this._asigTimer);
+    clearTimeout(this._qrTimer);
+    clearTimeout(this._qrAdvanceTimer);
+    clearTimeout(this._wifiTimer);
+    clearTimeout(this._wifiAdvanceTimer);
+  }
+
+  goToVincular() {
+    this.setState({
+      screen: 'vincular',
+      vincularSub: 'qr',
+      permisosStatus: 'idle',
+      qrStatus: 'idle',
+      showManualQr: false,
+      manualQrCode: '',
+    });
+  }
+
+  goToAsignacion() {
+    this.setState({ screen: 'asignacion' });
+  }
+
+  goToTutorial() {
+    this.setState({ screen: 'tutorial', tutorialStep: 0, tutorialDone: false });
+  }
+
+  resetOnboarding() {
+    this.setState({
+      screen: 'permisos',
+      permisosStatus: 'idle',
+      vincularSub: 'qr',
+      qrStatus: 'idle',
+      showManualQr: false,
+      manualQrCode: '',
+      selectedWifiId: null,
+      showManualSsid: false,
+      manualSsid: '',
+      wifiPassword: '',
+      wifiStatus: 'idle',
+      asigNombre: '',
+      asigTipo: 'Silo fijo',
+      asigTonelaje: '',
+      asigGrano: 'Soja',
+      asigGranoCustom: '',
+      asigStatus: 'idle',
+      tutorialStep: 0,
+      tutorialDone: false,
+    });
+  }
+
+
+  renderVals() {
+    const s = this.state;
+    const p = this.props;
+    const forceNotifDenied = !!p.forceNotifDenied;
+    const forceSaveError = !!p.forceSaveError;
+    const forceQrInvalid = !!p.forceQrInvalid;
+    const forceCameraDenied = !!p.forceCameraDenied;
+    const forceWifiWrongPassword = !!p.forceWifiWrongPassword;
+    const forceLanzaNoResponde = !!p.forceLanzaNoResponde;
+
+    const WIFI_NETS = [
+      { id: 'w1', name: 'Red_campo_01' },
+      { id: 'w2', name: 'SiloNet_Pro' },
+      { id: 'w3', name: 'Red_campo_02' },
+      { id: 'w4', name: 'iPhone de Lucas' },
+    ];
+
+    const granoOptionsList = ['Soja', 'Maíz', 'Trigo', 'Girasol', 'Otro'];
+    const tipoOptionsList = ['Silo fijo', 'Silobolsa'];
+
+    const makeEyeButton = (shown, toggle) => {
+      const DS = window.SiloGuardDesignSystem_633342;
+      const Icon = DS && DS.Icon;
+      if (!Icon) return null;
+      return React.createElement('button', {
+        type: 'button',
+        onClick: toggle,
+        style: { background: 'none', border: 'none', padding: 0, display: 'flex', cursor: 'pointer', color: 'inherit' },
+      }, React.createElement(Icon, { name: shown ? 'eye-off' : 'eye', size: 18 }));
+    };
+
+    const hasManualSsid = s.showManualSsid && s.manualSsid.trim().length > 0;
+    const wifiNetworkPicked = !!s.selectedWifiId || hasManualSsid;
+    const wifiPasswordOk = s.wifiPassword.length > 0;
+
+    const asigGranoIsOtro = s.asigGrano === 'Otro';
+    const asigFilled = s.asigNombre.trim().length > 0;
+
+    const TUTORIAL_STEPS = [
+      { icon: 'home', title: 'Tu Dashboard', desc: 'Vas a ver todos tus silos con su estado resumido: verde, amarillo o rojo según qué tan urgente sea revisarlos.' },
+      { icon: 'bell', title: 'Alertas inteligentes', desc: 'Te avisamos con al menos 48 hs de anticipación cuando algo necesita tu atención.' },
+      { icon: 'trending-up', title: 'Historial de sensores', desc: 'Revisá la evolución de CO₂, temperatura y humedad para confirmar que una acción correctiva funcionó.' },
+      { icon: 'shield', title: 'Pasaporte de Calidad', desc: 'Certificá tus lotes y compartilos con bancos, acopios o compradores.' },
+    ];
+    const tutorialStepData = TUTORIAL_STEPS[s.tutorialStep] || TUTORIAL_STEPS[0];
+    const finalGranoDisplay = s.asigGrano === 'Otro' && s.asigGranoCustom.trim() ? s.asigGranoCustom.trim() : s.asigGrano;
+    const navTabs = [
+      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+      { id: 'alertas', label: 'Alertas', icon: 'bell' },
+      { id: 'calidad', label: 'Calidad', icon: 'clipboard' },
+      { id: 'perfil', label: 'Perfil', icon: 'user' },
+    ];
+
+    return {
+      screenIsPermisos: s.screen === 'permisos',
+      screenIsVincularQr: s.screen === 'vincular' && s.vincularSub === 'qr',
+      screenIsVincularWifi: s.screen === 'vincular' && s.vincularSub === 'wifi',
+      screenIsAsignacion: s.screen === 'asignacion',
+      screenIsTutorial: s.screen === 'tutorial',
+
+      backFromQr: () => this.setState({ screen: 'permisos' }),
+
+      cameraDenied: forceCameraDenied,
+      cameraAllowed: !forceCameraDenied,
+      qrIsIdle: s.qrStatus === 'idle',
+      qrIsScanning: s.qrStatus === 'scanning',
+      qrIsOk: s.qrStatus === 'ok',
+      qrIsInvalid: s.qrStatus === 'invalid',
+      qrButtonLabel: s.qrStatus === 'scanning' ? 'Leyendo…' : s.qrStatus === 'ok' ? 'Continuar' : s.qrStatus === 'invalid' ? 'Reintentar' : 'Simular escaneo',
+      qrButtonAction: () => {
+        if (s.qrStatus === 'scanning') return;
+        if (s.qrStatus === 'ok') { this.setState({ vincularSub: 'wifi' }); return; }
+        this.setState({ qrStatus: 'scanning' });
+        clearTimeout(this._qrTimer);
+        this._qrTimer = setTimeout(() => {
+          if (forceQrInvalid) { this.setState({ qrStatus: 'invalid' }); return; }
+          this.setState({ qrStatus: 'ok' });
+          clearTimeout(this._qrAdvanceTimer);
+          this._qrAdvanceTimer = setTimeout(() => this.setState({ vincularSub: 'wifi' }), 700);
+        }, 1300);
+      },
+      toggleManualQr: () => this.setState({ showManualQr: !s.showManualQr }),
+      manualQrToggleLabel: s.showManualQr ? 'Ocultar ingreso manual' : '¿No tenés el código QR o no podés escanear?',
+      manualQrCode: s.manualQrCode,
+      setManualQrCode: (e) => this.setState({ manualQrCode: e.target.value }),
+      manualQrSubmitDisabled: !s.manualQrCode.trim(),
+      submitManualQr: () => {
+        if (!s.manualQrCode.trim()) return;
+        if (forceQrInvalid) { this.setState({ qrStatus: 'invalid', showManualQr: false }); return; }
+        this.setState({ qrStatus: 'ok', showManualQr: false });
+        clearTimeout(this._qrAdvanceTimer);
+        this._qrAdvanceTimer = setTimeout(() => this.setState({ vincularSub: 'wifi' }), 500);
+      },
+
+      backFromWifi: () => this.setState({ vincularSub: 'qr' }),
+      wifiNetworks: WIFI_NETS.map((n) => ({
+        id: n.id,
+        name: n.name,
+        isSelected: s.selectedWifiId === n.id,
+        isNotSelected: s.selectedWifiId !== n.id,
+        onClick: () => this.setState({ selectedWifiId: n.id, showManualSsid: false, wifiStatus: 'idle' }),
+      })),
+      toggleManualSsid: () => this.setState({ showManualSsid: !s.showManualSsid, selectedWifiId: null, wifiStatus: 'idle' }),
+      manualSsidToggleLabel: s.showManualSsid ? 'Elegir red de la lista' : '¿No ves tu red? Ingresarla manualmente',
+      manualSsid: s.manualSsid,
+      setManualSsid: (e) => this.setState({ manualSsid: e.target.value }),
+      wifiShowPasswordField: wifiNetworkPicked,
+      wifiPassword: s.wifiPassword,
+      setWifiPassword: (e) => this.setState({ wifiPassword: e.target.value }),
+      wifiPasswordFieldType: s.wifiShowPassword ? 'text' : 'password',
+      wifiEyeIcon: makeEyeButton(s.wifiShowPassword, () => this.setState({ wifiShowPassword: !s.wifiShowPassword })),
+      wifiHasError: s.wifiStatus === 'error-password' || s.wifiStatus === 'error-unreachable',
+      wifiErrorMsg: s.wifiStatus === 'error-password'
+        ? 'No se pudo conectar. Verificá la contraseña o acercá el celular al router.'
+        : s.wifiStatus === 'error-unreachable'
+        ? 'La lanza no responde. Verificá que esté encendida y cerca del router.'
+        : '',
+      wifiConnecting: s.wifiStatus === 'connecting',
+      wifiSubmitDisabled: !wifiNetworkPicked || !wifiPasswordOk || s.wifiStatus === 'connecting',
+      wifiButtonLabel: s.wifiStatus === 'connecting' ? 'Conectando…' : (s.wifiStatus === 'error-password' || s.wifiStatus === 'error-unreachable') ? 'Reintentar' : 'Conectar',
+      connectWifi: () => {
+        if (!wifiNetworkPicked || !wifiPasswordOk || s.wifiStatus === 'connecting') return;
+        this.setState({ wifiStatus: 'connecting' });
+        clearTimeout(this._wifiTimer);
+        this._wifiTimer = setTimeout(() => {
+          if (forceWifiWrongPassword) { this.setState({ wifiStatus: 'error-password' }); return; }
+          if (forceLanzaNoResponde) { this.setState({ wifiStatus: 'error-unreachable' }); return; }
+          this.setState({ wifiStatus: 'idle' });
+          clearTimeout(this._wifiAdvanceTimer);
+          this._wifiAdvanceTimer = setTimeout(() => this.goToAsignacion(), 500);
+        }, 1100);
+      },
+
+      permisosLoading: s.permisosStatus === 'loading',
+      permisosShowDeniedMsg: s.permisosStatus === 'denied-msg',
+      permisosButtonLabel: s.permisosStatus === 'loading' ? 'Activando…' : 'Activar notificaciones',
+      requestPermiso: () => {
+        if (s.permisosStatus === 'loading') return;
+        this.setState({ permisosStatus: 'loading' });
+        clearTimeout(this._permisosTimer);
+        this._permisosTimer = setTimeout(() => {
+          if (forceNotifDenied) {
+            this.setState({ permisosStatus: 'denied-msg' });
+            clearTimeout(this._permisosAdvanceTimer);
+            this._permisosAdvanceTimer = setTimeout(() => this.goToVincular(), 1400);
+          } else {
+            this.goToVincular();
+          }
+        }, 800);
+      },
+      skipPermiso: () => this.goToVincular(),
+
+      tipoOptions: tipoOptionsList.map((label) => ({
+        label,
+        isActive: s.asigTipo === label,
+        isInactive: s.asigTipo !== label,
+        onClick: () => this.setState({ asigTipo: label }),
+      })),
+
+      asigNombre: s.asigNombre,
+      setAsigNombre: (e) => this.setState({ asigNombre: e.target.value }),
+      asigLoading: s.asigStatus === 'loading',
+      asigTonelaje: s.asigTonelaje,
+      setAsigTonelaje: (e) => this.setState({ asigTonelaje: e.target.value }),
+
+      granoOptions: granoOptionsList.map((label) => ({
+        label,
+        isActive: s.asigGrano === label,
+        isInactive: s.asigGrano !== label,
+        onClick: () => this.setState({ asigGrano: label }),
+      })),
+      asigGranoIsOtro,
+      asigGranoCustom: s.asigGranoCustom,
+      setAsigGranoCustom: (e) => this.setState({ asigGranoCustom: e.target.value }),
+
+      asigHasError: s.asigStatus === 'error',
+      asigSubmitDisabled: !asigFilled || s.asigStatus === 'loading',
+      asigButtonLabel: s.asigStatus === 'loading' ? 'Guardando…' : 'Guardar y continuar',
+      submitAsignacion: () => {
+        if (!asigFilled) return;
+        this.setState({ asigStatus: 'loading' });
+        clearTimeout(this._asigTimer);
+        this._asigTimer = setTimeout(() => {
+          if (forceSaveError) {
+            this.setState({ asigStatus: 'error' });
+            return;
+          }
+          this.setState({ asigStatus: 'idle' });
+          this.goToTutorial();
+        }, 900);
+      },
+
+      backFromAsignacion: () => this.setState({ screen: 'vincular', vincularSub: 'wifi' }),
+
+      farmNameDisplay: 'Mi establecimiento',
+      siloDisplayName: s.asigNombre.trim() || 'Silo Norte',
+      siloDisplaySubtitle: `${finalGranoDisplay} · recién vinculado`,
+      navTabs,
+
+      spotlightDashboard: s.tutorialStep === 0,
+      spotlightDashboardOff: s.tutorialStep !== 0,
+      spotlightAlertas: s.tutorialStep === 1,
+      spotlightAlertasOff: s.tutorialStep !== 1,
+      spotlightHistorial: s.tutorialStep === 2,
+      spotlightHistorialOff: s.tutorialStep !== 2,
+      spotlightPasaporte: s.tutorialStep === 3,
+      spotlightPasaporteOff: s.tutorialStep !== 3,
+
+      // La card del tutorial se posiciona cerca de la sección resaltada en cada paso:
+      // "Alertas" está arriba (header) → card arriba; "Dashboard" e "Historial" están
+      // en la zona media → card al medio; "Pasaporte" resalta el nav bar de abajo → card abajo.
+      cardPositionTop: s.tutorialStep === 1,
+      cardPositionMiddle: s.tutorialStep === 0 || s.tutorialStep === 2,
+      cardPositionBottom: s.tutorialStep === 3,
+
+      tutorialActive: !s.tutorialDone,
+      tutorialDone: s.tutorialDone,
+      tutorialStep: s.tutorialStep,
+      tutorialIconName: tutorialStepData.icon,
+      tutorialTitle: tutorialStepData.title,
+      tutorialDesc: tutorialStepData.desc,
+      tutorialButtonLabel: s.tutorialStep === TUTORIAL_STEPS.length - 1 ? '¡Empezar!' : 'Siguiente',
+      tutorialNext: () => {
+        if (s.tutorialStep >= TUTORIAL_STEPS.length - 1) {
+          this.setState({ tutorialDone: true });
+        } else {
+          this.setState({ tutorialStep: s.tutorialStep + 1 });
+        }
+      },
+      resetOnboarding: () => this.resetOnboarding(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

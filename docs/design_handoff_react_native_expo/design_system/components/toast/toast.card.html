@@ -1,0 +1,72 @@
+<!-- @dsCard group="Components" viewport="700x320" name="Toast" subtitle="ok · warn · critical · info — notificaciones en contexto" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { margin: 0; background: var(--spec-bg); padding: 24px; }
+  .wrap { display: flex; flex-direction: column; gap: 10px; max-width: 440px; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { Toast, Button } = window.SiloGuardDesignSystem_633342;
+
+    function Demo() {
+      const [liveToasts, setLiveToasts] = React.useState([]);
+      const nextId = React.useRef(1);
+
+      const fire = () => {
+        const samples = [
+          { tone: 'ok',       title: 'Guardado',              message: 'Configuración actualizada.' },
+          { tone: 'warn',     title: 'Humedad elevada',       message: 'Silo Norte · 18.2%' },
+          { tone: 'critical', title: 'Temp. crítica',         message: 'Silo Sur · 42 °C' },
+          { tone: 'info',     title: 'Actualización lista',   message: 'Nueva versión 2.4.1' },
+        ];
+        const pick = samples[nextId.current % samples.length];
+        const id = nextId.current++;
+        setLiveToasts(prev => [...prev.slice(-2), { ...pick, id }]);
+        setTimeout(() => setLiveToasts(prev => prev.filter(t => t.id !== id)), 3500);
+      };
+
+      return (
+        <>
+          <div className="wrap">
+            <Toast tone="ok"       title="Silo sincronizado"       message="Los datos se actualizaron correctamente." />
+            <Toast tone="warn"     title="Humedad elevada"          message="Silo Norte · 18.2% — umbral recomendado: 14%" />
+            <Toast tone="critical" title="Temperatura crítica"      message="Silo Sur · 42 °C — acción requerida" />
+            <Toast tone="info"     title="Actualización disponible" message="Nueva versión 2.4.1 lista para instalar." />
+            <div style={{ marginTop: 8 }}>
+              <Button variant="secondary" size="sm" onClick={fire}>▶ Disparar toast en vivo</Button>
+            </div>
+          </div>
+
+          {/* live toasts — manual stack (no useToast needed) */}
+          <div style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 2000, display: 'flex', flexDirection: 'column', gap: 8,
+            width: 'min(400px, calc(100vw - 32px))', pointerEvents: 'none',
+          }}>
+            {liveToasts.map(t => (
+              <div key={t.id} style={{ pointerEvents: 'all', animation: 'toastIn .25s ease both' }}>
+                <Toast tone={t.tone} title={t.title} message={t.message}
+                  onDismiss={() => setLiveToasts(prev => prev.filter(x => x.id !== t.id))} />
+              </div>
+            ))}
+          </div>
+
+          <style>{`@keyframes toastIn { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }`}</style>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  </script>
+</body>
+</html>

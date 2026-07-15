@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Autenticación" description="Bloque 1 — Splash, Welcome (carrusel), Login y Registro (2 pasos)" -->
+<helmet>
+  <script src="./ds-base.js"></script>
+  <style>
+    @keyframes sg-spin { to { transform: rotate(360deg); } }
+    @keyframes sg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+    body { margin: 0; }
+    a { color: var(--text-link); text-decoration: underline; }
+    a:hover { color: var(--action-primary-hover); }
+  </style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; background:#000; display:flex; align-items:center; justify-content:center; padding:32px; box-sizing:border-box;">
+<div style="width:390px; height:844px; flex-shrink:0; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; position:relative; font-family:var(--font-sans); border-radius:36px; border:1px solid var(--border-default); box-shadow:0 30px 80px rgba(0,0,0,0.6);">
+
+  <dc-import name="AuthStatusBar" hint-size="390px,44px"></dc-import>
+
+  <!-- ===================== Splash ===================== -->
+  <sc-if value="{{ screenIsSplash }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; position:relative; min-height:0;">
+      <div style="filter:drop-shadow(0 4px 16px rgba(34,197,94,0.35)); animation:sg-pulse 1.8s var(--ease-standard) infinite;">
+        <img src="../../assets/logo-mark.svg" alt="" style="width:84px; height:84px; display:block;">
+      </div>
+      <span style="font-family:var(--font-sans); font-size:22px; font-weight:600; letter-spacing:-0.4px; color:var(--text-primary);">SiloGuard</span>
+      <div style="position:absolute; bottom:72px; width:26px; height:26px; border:3px solid var(--border-default); border-top-color:var(--green); border-radius:999px; animation:sg-spin 0.8s linear infinite;"></div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Welcome ===================== -->
+  <sc-if value="{{ screenIsWelcome }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; flex-direction:column; padding:8px 24px 32px; overflow:hidden; min-height:0;">
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; min-height:0;">
+        <div style="width:88px; height:88px; border-radius:999px; background:var(--green-tint); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(34,197,94,0.3); flex-shrink:0;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="{{ welcomeIconName }}" size="40" color="var(--green)" hint-size="40px,40px"></x-import>
+        </div>
+        <h1 style="margin:0; font-family:var(--font-sans); font-size:26px; line-height:32px; font-weight:700; letter-spacing:-0.5px; color:var(--text-primary);">{{ welcomeTitle }}</h1>
+        <p style="margin:0; max-width:280px; font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); color:var(--text-secondary);">{{ welcomeDesc }}</p>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 0 24px; flex-shrink:0;">
+        <sc-for list="{{ welcomeDots }}" as="dot" hint-placeholder-count="3">
+          <sc-if value="{{ dot.isActive }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ dot.onClick }}" aria-label="Ir a slide" style="width:20px; height:6px; border-radius:999px; background:var(--action-primary); border:none; padding:0; cursor:pointer;"></button>
+          </sc-if>
+          <sc-if value="{{ dot.isInactive }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ dot.onClick }}" aria-label="Ir a slide" style="width:6px; height:6px; border-radius:999px; background:var(--border-strong); border:none; padding:0; cursor:pointer;"></button>
+          </sc-if>
+        </sc-for>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px; flex-shrink:0;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" on-click="{{ goRegistro }}" hint-size="100%,48px">Registrarme</x-import>
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="ghost" full-width="{{ true }}" on-click="{{ goLogin }}" hint-size="100%,48px">Iniciar sesión</x-import>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Login ===================== -->
+  <sc-if value="{{ screenIsLogin }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Iniciar sesión" show-back="{{ true }}" on-back="{{ goWelcome }}" hint-size="390px,54px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:28px 24px 32px; display:flex; flex-direction:column;">
+
+      <sc-if value="{{ loginShowForm }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="EMAIL" placeholder="tu@email.com" type="email" autocomplete="email" value="{{ loginEmail }}" on-change="{{ setLoginEmail }}" disabled="{{ loginLoading }}" hint-size="100%,68px"></x-import>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="CONTRASEÑA" placeholder="••••••••" type="{{ loginPasswordFieldType }}" autocomplete="current-password" value="{{ loginPassword }}" on-change="{{ setLoginPassword }}" trailing-icon="{{ loginEyeIcon }}" error="{{ loginErrorMsg }}" disabled="{{ loginLoading }}" hint-size="100%,68px"></x-import>
+        </div>
+
+        <button onClick="{{ goRecuperar }}" style="align-self:flex-start; margin-top:12px; background:none; border:none; padding:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-link); cursor:pointer;">¿Olvidaste tu contraseña?</button>
+
+        <div style="margin-top:24px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ loginSubmitDisabled }}" on-click="{{ submitLogin }}" hint-size="100%,48px">{{ loginButtonLabel }}</x-import>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:12px; margin:24px 0;">
+          <span style="flex:1; height:1px; background:var(--border-default);"></span>
+          <span style="font-family:var(--font-sans); font-size:var(--text-caption); letter-spacing:var(--ls-caption); color:var(--text-secondary);">o continuá con</span>
+          <span style="flex:1; height:1px; background:var(--border-default);"></span>
+        </div>
+
+        <div style="display:flex; gap:12px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="secondary" full-width="{{ true }}" hint-size="100%,48px">Google</x-import>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="secondary" full-width="{{ true }}" hint-size="100%,48px">Apple</x-import>
+        </div>
+
+        <p style="text-align:center; margin:28px 0 0; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-secondary);">¿No tenés cuenta? <button onClick="{{ goRegistro }}" style="background:none; border:none; padding:0; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-link); cursor:pointer; font-weight:600;">Registrate</button></p>
+      </sc-if>
+
+      <sc-if value="{{ loginShowSuccess }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center;">
+          <div style="width:72px; height:72px; border-radius:999px; background:var(--green-tint); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(34,197,94,0.3);">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="34" color="var(--green)" hint-size="34px,34px"></x-import>
+          </div>
+          <h2 style="margin:0; font-family:var(--font-sans); font-size:var(--text-h2); color:var(--text-primary);">Sesión iniciada</h2>
+          <p style="margin:0; max-width:260px; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-secondary);">Este bloque termina acá — en la app continuarías al Dashboard.</p>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="ghost" on-click="{{ resetLogin }}" hint-size="200px,44px">Reiniciar demo</x-import>
+        </div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+
+  <!-- ===================== Registro · paso 1 ===================== -->
+  <sc-if value="{{ screenIsRegistro1 }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Crear cuenta" show-back="{{ true }}" on-back="{{ goWelcome }}" hint-size="390px,54px"></dc-import>
+    <dc-import name="AuthStepDots" total="{{ 2 }}" active="{{ 0 }}" hint-size="390px,38px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; display:flex; flex-direction:column;">
+      <p style="margin:0 0 20px; font-family:var(--font-sans); font-size:var(--text-caption); letter-spacing:var(--ls-caption); color:var(--text-secondary); text-transform:uppercase;">Paso 1 de 2 — Tus datos</p>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="NOMBRE COMPLETO" placeholder="Juan Pérez" autocomplete="name" value="{{ regNombre }}" on-change="{{ setRegNombre }}" hint-size="100%,68px"></x-import>
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="EMAIL" placeholder="juan@email.com" type="email" autocomplete="email" value="{{ regEmail }}" on-change="{{ setRegEmail }}" hint-size="100%,68px"></x-import>
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="TELÉFONO" placeholder="+54 9 341 555-0123" type="tel" autocomplete="tel" value="{{ regTelefono }}" on-change="{{ setRegTelefono }}" hint-size="100%,68px"></x-import>
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="CONTRASEÑA" placeholder="Mínimo 8 caracteres" type="{{ regPasswordFieldType }}" autocomplete="new-password" value="{{ regPassword }}" on-change="{{ setRegPassword }}" trailing-icon="{{ regEyeIcon }}" hint-size="100%,68px"></x-import>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
+        <sc-if value="{{ ruleLenOk }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:8px;"><x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="14" color="var(--status-ok)" hint-size="14px,14px"></x-import><span style="font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-ok);">Mínimo 8 caracteres</span></div>
+        </sc-if>
+        <sc-if value="{{ ruleLenNotOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; gap:8px;"><x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="14" color="var(--text-secondary)" hint-size="14px,14px"></x-import><span style="font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary);">Mínimo 8 caracteres</span></div>
+        </sc-if>
+        <sc-if value="{{ ruleUpperOk }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:8px;"><x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="14" color="var(--status-ok)" hint-size="14px,14px"></x-import><span style="font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-ok);">Al menos 1 mayúscula</span></div>
+        </sc-if>
+        <sc-if value="{{ ruleUpperNotOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; gap:8px;"><x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="14" color="var(--text-secondary)" hint-size="14px,14px"></x-import><span style="font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary);">Al menos 1 mayúscula</span></div>
+        </sc-if>
+        <sc-if value="{{ ruleNumOk }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:8px;"><x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="14" color="var(--status-ok)" hint-size="14px,14px"></x-import><span style="font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-ok);">Al menos 1 número</span></div>
+        </sc-if>
+        <sc-if value="{{ ruleNumNotOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; gap:8px;"><x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="14" color="var(--text-secondary)" hint-size="14px,14px"></x-import><span style="font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary);">Al menos 1 número</span></div>
+        </sc-if>
+      </div>
+
+      <div style="margin-top:28px;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ registro1Disabled }}" on-click="{{ goRegistro2 }}" hint-size="100%,48px">Siguiente</x-import>
+      </div>
+      <p style="text-align:center; margin:20px 0 0; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-secondary);">¿Ya tenés cuenta? <button onClick="{{ goLogin }}" style="background:none; border:none; padding:0; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-link); cursor:pointer; font-weight:600;">Iniciá sesión</button></p>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Registro · paso 2 ===================== -->
+  <sc-if value="{{ screenIsRegistro2 }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Crear cuenta" show-back="{{ true }}" on-back="{{ goRegistro1 }}" hint-size="390px,54px"></dc-import>
+    <dc-import name="AuthStepDots" total="{{ 2 }}" active="{{ 1 }}" hint-size="390px,38px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:8px 24px 32px; display:flex; flex-direction:column;">
+
+      <sc-if value="{{ registro2ShowForm }}" hint-placeholder-val="{{ true }}">
+        <p style="margin:0 0 20px; font-family:var(--font-sans); font-size:var(--text-caption); letter-spacing:var(--ls-caption); color:var(--text-secondary); text-transform:uppercase;">Paso 2 de 2 — Tu establecimiento</p>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="ESTABLECIMIENTO" placeholder="Estancia La Esperanza" value="{{ regEstablecimiento }}" on-change="{{ setRegEstablecimiento }}" disabled="{{ registro2Loading }}" hint-size="100%,68px"></x-import>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="LOCALIDAD / PROVINCIA" placeholder="Pergamino, Buenos Aires" value="{{ regLocalidad }}" on-change="{{ setRegLocalidad }}" disabled="{{ registro2Loading }}" hint-size="100%,68px"></x-import>
+        </div>
+
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-top:20px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Checkbox" checked="{{ regAccepted }}" on-change="{{ setRegAccepted }}" disabled="{{ registro2Loading }}" hint-size="20px,20px"></x-import>
+          <span style="font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); color:var(--text-primary);">Acepto los <a href="#">Términos y condiciones</a></span>
+        </div>
+
+        <sc-if value="{{ registro2HasError }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:16px 0 0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-critical);">{{ registro2ErrorMsg }}</p>
+        </sc-if>
+
+        <div style="margin-top:24px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ registro2SubmitDisabled }}" on-click="{{ submitRegistro }}" hint-size="100%,48px">{{ registro2ButtonLabel }}</x-import>
+        </div>
+        <p style="margin:16px 0 0; text-align:center; font-family:var(--font-sans); font-size:11px; line-height:16px; color:var(--text-secondary);">Al registrarte vas a recibir un email para verificar tu cuenta.</p>
+      </sc-if>
+
+    </div>
+  </sc-if>
+
+  <!-- ===================== Verificación de email ===================== -->
+  <sc-if value="{{ screenIsVerificacion }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Verificá tu email" show-back="{{ false }}" hint-size="390px,54px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:32px 24px 32px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <div style="width:88px; height:88px; border-radius:999px; background:var(--green-tint); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(34,197,94,0.3); margin-bottom:24px; flex-shrink:0;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="mail" size="36" color="var(--green)" hint-size="36px,36px"></x-import>
+      </div>
+      <h1 style="margin:0 0 12px; font-family:var(--font-sans); font-size:var(--text-h1); line-height:var(--lh-h1); font-weight:700; letter-spacing:var(--ls-h1); color:var(--text-primary);">Verificá tu email</h1>
+      <p style="margin:0; max-width:280px; font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); color:var(--text-secondary);">Te enviamos un enlace de verificación a <strong style="color:var(--text-primary);">{{ verifEmailDisplay }}</strong>. Revisá tu bandeja de entrada.</p>
+
+      <div style="margin-top:28px; width:100%;">
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="secondary" full-width="{{ true }}" disabled="{{ verifResendDisabled }}" on-click="{{ resendVerification }}" hint-size="100%,48px">{{ verifResendLabel }}</x-import>
+      </div>
+
+      <sc-if value="{{ verifResentMsg }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:12px 0 0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--status-ok);">Email reenviado correctamente ✓</p>
+      </sc-if>
+
+      <p style="margin:20px 0 0; font-family:var(--font-sans); font-size:var(--text-caption); line-height:var(--lh-caption); color:var(--text-secondary);">¿No lo encontrás? Revisá tu carpeta de spam.</p>
+
+      <div style="display:flex; gap:20px; margin-top:16px;">
+        <button onClick="{{ goCambiarEmail }}" style="background:none; border:none; padding:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-link); cursor:pointer;">Cambiar email</button>
+        <button onClick="{{ goSoporte }}" style="background:none; border:none; padding:0; font-family:var(--font-sans); font-size:var(--text-caption); color:var(--text-secondary); text-decoration:underline; cursor:pointer;">¿Problemas? Contactanos</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== Recuperar contraseña ===================== -->
+  <sc-if value="{{ screenIsRecuperar }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AuthHeader" title="Recuperar contraseña" show-back="{{ true }}" on-back="{{ goLogin }}" hint-size="390px,54px"></dc-import>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:28px 24px 32px; display:flex; flex-direction:column;">
+
+      <sc-if value="{{ recuperarShowForm }}" hint-placeholder-val="{{ true }}">
+        <p style="margin:0 0 20px; font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); color:var(--text-secondary);">Ingresá el email con el que te registraste y te enviamos un enlace para crear una nueva contraseña.</p>
+        <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Input" label="EMAIL" placeholder="tu@email.com" type="email" autocomplete="email" value="{{ recuperarEmail }}" on-change="{{ setRecuperarEmail }}" disabled="{{ recuperarLoading }}" hint-size="100%,68px"></x-import>
+        <div style="margin-top:24px;">
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" full-width="{{ true }}" disabled="{{ recuperarSubmitDisabled }}" on-click="{{ submitRecuperar }}" hint-size="100%,48px">{{ recuperarButtonLabel }}</x-import>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ recuperarShowSent }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center;">
+          <div style="width:72px; height:72px; border-radius:999px; background:var(--green-tint); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(34,197,94,0.3);">
+            <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="check-circle" size="34" color="var(--green)" hint-size="34px,34px"></x-import>
+          </div>
+          <h2 style="margin:0; font-family:var(--font-sans); font-size:var(--text-h2); color:var(--text-primary);">Revisá tu bandeja de entrada</h2>
+          <p style="margin:0; max-width:270px; font-family:var(--font-sans); font-size:var(--text-body); color:var(--text-secondary);">Si existe una cuenta con ese email, vas a recibir un enlace para crear una nueva contraseña.</p>
+          <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Button" variant="ghost" on-click="{{ goLogin }}" hint-size="220px,44px">Volver a iniciar sesión</x-import>
+        </div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;initialScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;splash&quot;,&quot;options&quot;:[&quot;splash&quot;,&quot;welcome&quot;,&quot;login&quot;,&quot;registro&quot;,&quot;verificacion&quot;,&quot;recuperar&quot;],&quot;tsType&quot;:&quot;'splash'|'welcome'|'login'|'registro'|'verificacion'|'recuperar'&quot;},&quot;forceLoginError&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;},&quot;forceEmailTaken&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados forzados (demo)&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: this.props.initialScreen || 'splash',
+    welcomeSlide: 0,
+
+    loginEmail: '',
+    loginPassword: '',
+    loginShowPassword: false,
+    loginStatus: 'idle',
+
+    regStep: 1,
+    regNombre: '',
+    regEmail: '',
+    regTelefono: '',
+    regPassword: '',
+    regShowPassword: false,
+    regEstablecimiento: '',
+    regLocalidad: '',
+    regAccepted: false,
+    reg2Status: 'idle',
+
+    verifEmail: '',
+    verifCooldown: 0,
+    verifResentMsg: false,
+
+    recuperarEmail: '',
+    recuperarStatus: 'form',
+  };
+
+  componentDidMount() {
+    if (this.state.screen === 'splash') {
+      this._splashTimer = setTimeout(() => {
+        if (this.state.screen === 'splash') this.setState({ screen: 'welcome' });
+      }, 1800);
+    }
+    this._carouselTimer = setInterval(() => {
+      if (this.state.screen === 'welcome') {
+        this.setState((s) => ({ welcomeSlide: (s.welcomeSlide + 1) % 3 }));
+      }
+    }, 4200);
+    this._cooldownTimer = setInterval(() => {
+      if (this.state.screen === 'verificacion' && this.state.verifCooldown > 0) {
+        this.setState((s) => ({ verifCooldown: Math.max(0, s.verifCooldown - 1) }));
+      }
+    }, 1000);
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this._splashTimer);
+    clearInterval(this._carouselTimer);
+    clearInterval(this._cooldownTimer);
+    clearTimeout(this._loginTimer);
+    clearTimeout(this._regTimer);
+    clearTimeout(this._resentMsgTimer);
+    clearTimeout(this._recuperarTimer);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const p = this.props;
+    const DS = window.SiloGuardDesignSystem_633342;
+    const Icon = DS && DS.Icon;
+
+    const slides = [
+      { icon: 'target', title: 'Monitoreo en tiempo real', desc: 'Vigilá CO₂, temperatura y humedad de tus silos desde la palma de tu mano.' },
+      { icon: 'bell', title: 'Alertas con anticipación', desc: 'Te avisamos con al menos 48 hs antes de que el deterioro sea irreversible.' },
+      { icon: 'shield', title: 'Pasaporte de calidad', desc: 'Certificá tus lotes y compartilos con bancos, acopios o compradores.' },
+    ];
+    const activeSlide = slides[s.welcomeSlide] || slides[0];
+    const welcomeDots = slides.map((_, i) => ({
+      i,
+      isActive: i === s.welcomeSlide,
+      isInactive: i !== s.welcomeSlide,
+      onClick: () => this.setState({ welcomeSlide: i }),
+    }));
+
+    const loginFilled = s.loginEmail.trim().length > 0 && s.loginPassword.length > 0;
+    const forceLoginError = !!p.forceLoginError;
+
+    const pw = s.regPassword;
+    const ruleLenOk = pw.length >= 8;
+    const ruleUpperOk = /[A-Z]/.test(pw);
+    const ruleNumOk = /[0-9]/.test(pw);
+    const emailOk = /\S+@\S+\.\S+/.test(s.regEmail);
+    const registro1Disabled = !(s.regNombre.trim() && emailOk && s.regTelefono.trim() && ruleLenOk && ruleUpperOk && ruleNumOk);
+
+    const forceEmailTaken = !!p.forceEmailTaken;
+    const registro2Filled = !!(s.regEstablecimiento.trim() && s.regLocalidad.trim() && s.regAccepted);
+    const registro2ErrorMsg = s.reg2Status === 'error' ? 'Este email ya está registrado. ¿Querés iniciar sesión?' : '';
+
+    const makeEyeButton = (shown, toggle) => (!Icon ? null : React.createElement('button', {
+      type: 'button',
+      onClick: toggle,
+      style: { background: 'none', border: 'none', padding: 0, display: 'flex', cursor: 'pointer', color: 'inherit' },
+    }, React.createElement(Icon, { name: shown ? 'eye-off' : 'eye', size: 18 })));
+
+    return {
+      screenIsSplash: s.screen === 'splash',
+      screenIsWelcome: s.screen === 'welcome',
+      screenIsLogin: s.screen === 'login',
+      screenIsRegistro1: s.screen === 'registro' && s.regStep === 1,
+      screenIsRegistro2: s.screen === 'registro' && s.regStep === 2,
+      screenIsVerificacion: s.screen === 'verificacion',
+      screenIsRecuperar: s.screen === 'recuperar',
+
+      welcomeIconName: activeSlide.icon,
+      welcomeTitle: activeSlide.title,
+      welcomeDesc: activeSlide.desc,
+      welcomeDots,
+
+      goWelcome: () => this.setState({ screen: 'welcome' }),
+      goLogin: () => this.setState({ screen: 'login', loginStatus: 'idle' }),
+      goRegistro: () => this.setState({ screen: 'registro', regStep: 1, reg2Status: 'idle' }),
+      goRegistro1: () => this.setState({ regStep: 1 }),
+      goRegistro2: () => { if (!registro1Disabled) this.setState({ regStep: 2 }); },
+      goRecuperar: () => this.setState({ screen: 'recuperar', recuperarStatus: 'form', recuperarEmail: '' }),
+
+      loginEmail: s.loginEmail,
+      setLoginEmail: (e) => this.setState({ loginEmail: e.target.value, loginStatus: 'idle' }),
+      loginPassword: s.loginPassword,
+      setLoginPassword: (e) => this.setState({ loginPassword: e.target.value, loginStatus: 'idle' }),
+      loginPasswordFieldType: s.loginShowPassword ? 'text' : 'password',
+      loginEyeIcon: makeEyeButton(s.loginShowPassword, () => this.setState({ loginShowPassword: !s.loginShowPassword })),
+      loginErrorMsg: s.loginStatus === 'error' ? 'Email o contraseña incorrectos.' : '',
+      loginLoading: s.loginStatus === 'loading',
+      loginSubmitDisabled: !loginFilled || s.loginStatus === 'loading',
+      loginButtonLabel: s.loginStatus === 'loading' ? 'Ingresando…' : 'Ingresar',
+      loginShowForm: s.loginStatus !== 'success',
+      loginShowSuccess: s.loginStatus === 'success',
+      submitLogin: () => {
+        if (!loginFilled) return;
+        this.setState({ loginStatus: 'loading' });
+        clearTimeout(this._loginTimer);
+        this._loginTimer = setTimeout(() => {
+          this.setState({ loginStatus: forceLoginError ? 'error' : 'success' });
+        }, 900);
+      },
+      resetLogin: () => this.setState({ loginStatus: 'idle', loginEmail: '', loginPassword: '' }),
+
+      regNombre: s.regNombre,
+      setRegNombre: (e) => this.setState({ regNombre: e.target.value }),
+      regEmail: s.regEmail,
+      setRegEmail: (e) => this.setState({ regEmail: e.target.value }),
+      regTelefono: s.regTelefono,
+      setRegTelefono: (e) => this.setState({ regTelefono: e.target.value }),
+      regPassword: s.regPassword,
+      setRegPassword: (e) => this.setState({ regPassword: e.target.value }),
+      regPasswordFieldType: s.regShowPassword ? 'text' : 'password',
+      regEyeIcon: makeEyeButton(s.regShowPassword, () => this.setState({ regShowPassword: !s.regShowPassword })),
+
+      ruleLenOk, ruleLenNotOk: !ruleLenOk,
+      ruleUpperOk, ruleUpperNotOk: !ruleUpperOk,
+      ruleNumOk, ruleNumNotOk: !ruleNumOk,
+      registro1Disabled,
+
+      regEstablecimiento: s.regEstablecimiento,
+      setRegEstablecimiento: (e) => this.setState({ regEstablecimiento: e.target.value }),
+      regLocalidad: s.regLocalidad,
+      setRegLocalidad: (e) => this.setState({ regLocalidad: e.target.value }),
+      regAccepted: s.regAccepted,
+      setRegAccepted: (checked) => this.setState({ regAccepted: checked }),
+
+      registro2ShowForm: s.reg2Status !== 'success',
+      registro2ShowSuccess: s.reg2Status === 'success',
+      registro2Loading: s.reg2Status === 'loading',
+      registro2HasError: s.reg2Status === 'error',
+      registro2ErrorMsg,
+      registro2SubmitDisabled: !registro2Filled || s.reg2Status === 'loading',
+      registro2ButtonLabel: s.reg2Status === 'loading' ? 'Creando cuenta…' : 'Crear cuenta',
+      submitRegistro: () => {
+        if (!registro2Filled) return;
+        this.setState({ reg2Status: 'loading' });
+        clearTimeout(this._regTimer);
+        this._regTimer = setTimeout(() => {
+          if (forceEmailTaken) { this.setState({ reg2Status: 'error' }); return; }
+          this.setState({ screen: 'verificacion', reg2Status: 'idle', verifEmail: s.regEmail, verifCooldown: 60, verifResentMsg: false });
+        }, 900);
+      },
+
+      verifEmailDisplay: s.verifEmail || s.regEmail || 'tu@email.com',
+      verifResendDisabled: s.verifCooldown > 0,
+      verifResendLabel: s.verifCooldown > 0 ? `Reenviar en ${s.verifCooldown}s` : 'Reenviar email',
+      verifResentMsg: s.verifResentMsg,
+      goCambiarEmail: () => this.setState({ screen: 'registro', regStep: 1 }),
+      goSoporte: () => {},
+      resendVerification: () => {
+        if (s.verifCooldown > 0) return;
+        this.setState({ verifCooldown: 60, verifResentMsg: true });
+        clearTimeout(this._resentMsgTimer);
+        this._resentMsgTimer = setTimeout(() => this.setState({ verifResentMsg: false }), 2500);
+      },
+
+      recuperarEmail: s.recuperarEmail,
+      setRecuperarEmail: (e) => this.setState({ recuperarEmail: e.target.value }),
+      recuperarShowForm: s.recuperarStatus !== 'sent',
+      recuperarShowSent: s.recuperarStatus === 'sent',
+      recuperarLoading: s.recuperarStatus === 'loading',
+      recuperarSubmitDisabled: !s.recuperarEmail.trim() || s.recuperarStatus === 'loading',
+      recuperarButtonLabel: s.recuperarStatus === 'loading' ? 'Enviando…' : 'Enviar enlace',
+      submitRecuperar: () => {
+        if (!s.recuperarEmail.trim()) return;
+        this.setState({ recuperarStatus: 'loading' });
+        clearTimeout(this._recuperarTimer);
+        this._recuperarTimer = setTimeout(() => {
+          this.setState({ recuperarStatus: 'sent' });
+        }, 900);
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

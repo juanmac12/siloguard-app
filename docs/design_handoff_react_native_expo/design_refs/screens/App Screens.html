@@ -1,0 +1,1190 @@
+<!-- @dsCard group="UI Kit" viewport="1440x900" name="App Screens" subtitle="Dashboard · Detalle silo · Lista alertas · Detalle alerta — prototipo navegable" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+@keyframes spin{to{transform:rotate(360deg)}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#080808}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;
+  background:radial-gradient(ellipse 80% 50% at 50% 30%,rgba(34,197,94,.05) 0%,transparent 70%),#080808;
+  font-family:var(--font-sans)}
+::-webkit-scrollbar{width:0}
+textarea{font-family:var(--font-sans);font-size:14px;color:var(--text-primary)}
+button:focus-visible{outline:2px solid var(--action-primary);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../_ds_bundle.js"></script>
+<script src="./mock-data.js"></script>
+<script type="text/babel" src="./tweaks-panel.jsx"></script>
+<script type="text/babel" src="./profile-screens.jsx"></script>
+<script type="text/babel" src="./historial-screen.jsx"></script>
+<script type="text/babel" src="./umbrales-screen.jsx"></script>
+<script type="text/babel" src="./pasaporte-screens.jsx"></script>
+<script type="text/babel" src="./estados-especiales.jsx"></script>
+<script type="text/babel" src="./contacto-tecnico-screen.jsx"></script>
+<script type="text/babel">
+const DS = window.SiloGuardDesignSystem_633342;
+const { Button, StatusBadge, SensorStat, AlertCard, ListItem, NavBar, Tabs, BottomSheet, EmptyState, Icon, Toast } = DS;
+const { useTweaks, TweaksPanel, TweakSection, TweakText, TweakToggle, TweakRadio, TweakNumber, ProfileScreen, EditProfileScreen, NotificationsScreen, DevicesScreen, HistorialScreen, UmbralesScreen, PasaporteListScreen, PasaporteDetailScreen, LoteStatusCard, IniciarLoteSheet, FinalizarLoteConfirm, LOTES_PASAPORTE, genLoteId, todayStr, estimateScore, OfflineBanner, DeviceOfflineBanner, DisabledHint, relTime, ContactoTecnicoScreen } = window;
+const { silos: SILOS, alerts: ALERTS_INIT } = window.SG;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "producerName": "Lucas",
+  "startScreen": "dashboard",
+  "showBanner": false,
+  "profileVariant": "propuesta",
+  "loteEstadoDemo": "monitoring",
+  "connState": "online",
+  "deviceState": "ok",
+  "techAvailability": "auto"
+}/*EDITMODE-END*/;
+
+/* ── shared ── */
+const LBL = {fontFamily:'var(--font-sans)',fontSize:11,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text-muted)',margin:'0 0 8px',display:'block'};
+const IB  = {display:'flex',alignItems:'center',justifyContent:'center',width:40,height:40,background:'transparent',border:'none',borderRadius:'var(--radius-md)',color:'var(--text-primary)',cursor:'pointer',flexShrink:0};
+
+/* ── Sparkline ── */
+function Sparkline({data,color='var(--action-primary)',height=56}){
+  const W=200,H=height,mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1,pad=H*.12;
+  const pts=data.map((v,i)=>[(i/(data.length-1))*W,H-pad-((v-mn)/rng)*(H-pad*2)]);
+  const ln=pts.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const days=['L','M','M','J','V','S','D'];
+  return(<div>
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height,display:'block'}}>
+      <defs><linearGradient id="spk" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={color} stopOpacity=".18"/><stop offset="100%" stopColor={color} stopOpacity="0"/>
+      </linearGradient></defs>
+      <path d={`${ln} L${W},${H} L0,${H} Z`} fill="url(#spk)"/>
+      <path d={ln} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      {pts.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r={i===data.length-1?4:2.5}
+        fill={i===data.length-1?color:'transparent'} stroke={i===data.length-1?'none':color} strokeWidth="1.5"/>)}
+    </svg>
+    <div style={{display:'flex',justifyContent:'space-between',padding:'4px 1px 0'}}>
+      {days.map((d,i)=><span key={i} style={{fontFamily:'var(--font-sans)',fontSize:10,
+        color:i===days.length-1?color:'var(--text-muted)',fontWeight:i===days.length-1?700:400}}>{d}</span>)}
+    </div>
+  </div>);
+}
+
+/* ── StatChip — fixed-height value row so all 3 chips are visually aligned ── */
+function StatChip({label,value,color}){
+  const isNum=typeof value==='number';
+  return(
+    <div style={{background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)',padding:'10px 12px'}}>
+      <div style={{height:28,display:'flex',alignItems:'center',overflow:'hidden',
+        fontFamily:'var(--font-sans)',fontSize:isNum?22:15,fontWeight:700,color,
+        letterSpacing:isNum?'-0.3px':'-0.1px',lineHeight:1,whiteSpace:'nowrap'}}>
+        {value}
+      </div>
+      <div style={{fontFamily:'var(--font-sans)',fontSize:10,color:'var(--text-muted)',letterSpacing:'.05em',textTransform:'uppercase',marginTop:4}}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+/* ── ThresholdStat — mirrors SensorStat structure exactly for the Umbral tile ── */
+function ThresholdStat({value}){
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:'var(--space-md)',padding:'var(--space-md)',
+      background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',minWidth:0}}>
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+        <span style={{display:'flex',color:'var(--text-secondary)'}}><Icon name="target" size={16}/></span>
+        <span style={{fontFamily:'var(--font-sans)',fontSize:11,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:'.05em',fontWeight:600,whiteSpace:'nowrap'}}>Umbral máx.</span>
+      </div>
+      <div style={{display:'flex',alignItems:'baseline',gap:4}}>
+        <span style={{fontFamily:'var(--font-sans)',fontSize:28,fontWeight:700,letterSpacing:'-0.5px',lineHeight:1,color:'var(--text-secondary)'}}>{value}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── PhoneFrame ── */
+function PhoneFrame({children}){
+  return(
+    <div style={{width:390,height:844,background:'var(--surface-app)',borderRadius:52,border:'10px solid #1c1c1e',
+      outline:'1px solid #333',overflow:'hidden',display:'flex',flexDirection:'column',
+      boxShadow:'0 40px 100px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.04)'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 22px 6px',background:'var(--surface-app)',flexShrink:0}}>
+        <span style={{fontFamily:'var(--font-sans)',fontSize:15,fontWeight:600,color:'var(--text-primary)'}}>9:41</span>
+        <div style={{display:'flex',gap:5,alignItems:'center',color:'var(--text-primary)'}}>
+          <svg width="16" height="11" fill="currentColor" opacity=".85"><rect x="0" y="4" width="3" height="7" rx=".4"/><rect x="4.5" y="2.5" width="3" height="8.5" rx=".4"/><rect x="9" y="1" width="3" height="10" rx=".4"/><rect x="13.5" y="0" width="2.5" height="11" rx=".4" opacity=".3"/></svg>
+          <svg width="15" height="11" fill="currentColor" opacity=".85"><path d="M7.5 2.3C5.3 2.3 3.2 3.2 1.7 4.7L0 3C2 1.1 4.6 0 7.5 0s5.5 1.1 7.5 3L13.3 4.7C11.8 3.2 9.7 2.3 7.5 2.3z"/><path d="M7.5 5.5c-1.4 0-2.6.6-3.5 1.5L2.2 5.2C3.5 3.8 5.4 3 7.5 3s4 .8 5.3 2.2L11 7c-.9-.9-2.1-1.5-3.5-1.5z"/><circle cx="7.5" cy="9.5" r="1.8"/></svg>
+          <div style={{display:'flex',alignItems:'center'}}><div style={{width:22,height:11,borderRadius:3,border:'1.5px solid rgba(255,255,255,.5)',padding:'1.5px 2px',display:'flex',alignItems:'center'}}><div style={{width:'80%',height:'100%',borderRadius:1.5,background:'var(--text-primary)'}}/></div></div>
+        </div>
+      </div>
+      <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>{children}</div>
+      <div style={{display:'flex',justifyContent:'center',padding:'6px 0 8px',background:'var(--surface-app)',flexShrink:0}}>
+        <div style={{width:134,height:5,borderRadius:3,background:'rgba(255,255,255,.25)'}}/>
+      </div>
+    </div>
+  );
+}
+
+/* ── BackHeader ── */
+function BackHeader({title,onBack,subtitle,right}){
+  return(
+    <div style={{display:'flex',alignItems:'center',gap:4,padding:'10px 16px 10px 8px',background:'var(--surface-app)',borderBottom:'1px solid var(--border-default)',flexShrink:0}}>
+      <button onClick={onBack} style={{...IB,color:'var(--action-primary)'}}><Icon name="chevron-left" size={24}/></button>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontFamily:'var(--font-sans)',fontSize:17,fontWeight:600,color:'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{title}</div>
+        {subtitle&&<div style={{fontFamily:'var(--font-sans)',fontSize:12,color:'var(--text-secondary)',marginTop:1}}>{subtitle}</div>}
+      </div>
+      {right&&<div style={{flexShrink:0,marginLeft:8}}>{right}</div>}
+    </div>
+  );
+}
+
+/* ── getMostCriticalReading — picks the sensor that most needs attention ──
+   Priority: critical > warn > ok. Tie-break: temp > humidity > co2.        ── */
+function getMostCriticalReading(s){
+  const SCORE={ok:0,warn:1,critical:2};
+  const sensors=[
+    {value:s.temp, unit:'°C',  tone:s.temp>35?'critical':s.temp>28?'warn':'ok',  pri:3},
+    {value:s.hum,  unit:'%',   tone:s.hum>20?'critical':s.hum>16?'warn':'ok',    pri:2},
+    {value:s.co2,  unit:'ppm', tone:s.co2>800?'critical':s.co2>600?'warn':'ok',  pri:1},
+  ];
+  return sensors.sort((a,b)=>SCORE[b.tone]-SCORE[a.tone]||b.pri-a.pri)[0];
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCREEN 1 — Dashboard
+   ═══════════════════════════════════════════════════════════════════════════ */
+function DashboardScreen({silos,alerts,nav,producerName,showBanner,farmName,connState='online'}){
+  const active=alerts.filter(a=>a.status==='active');
+  const offline = connState!=='online';
+  const offlineMins = connState==='offline-prolonged'?128:12;
+  const crit=active.some(a=>a.variant==='critical');
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--surface-app)',position:'relative'}}>
+      {/* header */}
+      <div style={{padding:'14px 16px 10px',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <p style={{fontFamily:'var(--font-sans)',fontSize:12,color:'var(--text-secondary)',margin:'0 0 3px',fontWeight:500,letterSpacing:'.02em'}}>{farmName}</p>
+          <h1 style={{fontFamily:'var(--font-sans)',fontSize:26,fontWeight:700,color:'var(--text-primary)',letterSpacing:'-0.3px',margin:0}}>Mis silos</h1>
+        </div>
+        <button onClick={()=>nav('alerts')} style={{...IB,position:'relative',background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)'}}>
+          <Icon name="bell" size={20}/>
+          {active.length>0&&<span style={{position:'absolute',top:8,right:8,width:8,height:8,borderRadius:'50%',background:'var(--status-critical)',boxShadow:'0 0 0 2px var(--surface-app)'}}/>}
+        </button>
+      </div>
+
+      {/* summary stats — fixed-height values so all 3 chips are level */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,padding:'0 16px 12px',flexShrink:0}}>
+        <StatChip label="Silos"   value={silos.length} color="var(--text-primary)"/>
+        <StatChip label="Alertas" value={active.length} color={active.length?'var(--status-critical)':'var(--status-ok)'}/>
+        <StatChip label="Estado"
+          value={crit?'Crítico':active.length?'Revisar':'Óptimo'}
+          color={crit?'var(--status-critical)':active.length?'var(--status-warn)':'var(--status-ok)'}/>
+      </div>
+
+      {/* [27] sin conexión — estado global superpuesto al dashboard */}
+      {offline&&<OfflineBanner minutesOffline={offlineMins}/>}
+
+      {/* weekly summary banner */}
+      {showBanner&&(
+        <button onClick={()=>{}} style={{display:'flex',alignItems:'center',gap:10,margin:'0 16px 8px',padding:'11px 14px',
+          background:'var(--green-tint)',
+          border:'1px solid rgba(34,197,94,.2)',
+          borderRadius:'var(--radius-lg)',cursor:'pointer',textAlign:'left',flexShrink:0}}>
+          <Icon name="clipboard" size={16} color="var(--action-primary)"/>
+          <span style={{flex:1,fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-primary)',fontWeight:500}}>
+            Resumen semanal disponible
+          </span>
+          <Icon name="chevron-right" size={16} color="var(--text-secondary)"/>
+        </button>
+      )}
+
+      {/* alert banner */}
+      {active.length>0&&(
+        <button onClick={()=>nav('alerts')} style={{display:'flex',alignItems:'center',gap:10,margin:'0 16px 12px',padding:'11px 14px',
+          background:crit?'rgba(239,68,68,.07)':'rgba(234,179,8,.07)',
+          border:`1px solid ${crit?'var(--status-critical)':'var(--status-warn)'}`,
+          borderRadius:'var(--radius-lg)',cursor:'pointer',textAlign:'left',flexShrink:0}}>
+          <Icon name="alert-triangle" size={16} color={crit?'var(--status-critical)':'var(--status-warn)'}/>
+          <span style={{flex:1,fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-primary)',fontWeight:500}}>
+            {active.length} {active.length===1?'alerta activa':'alertas activas'} — toca para ver
+          </span>
+          <Icon name="chevron-right" size={16} color="var(--text-secondary)"/>
+        </button>
+      )}
+
+      {/* silo list — using DS ListItem component */}
+      <div style={{flex:1,overflowY:'auto',padding:'0 16px 12px',position:'relative',opacity:offline?.75:1,transition:'opacity .2s'}}>
+        <span style={LBL}>Tus silos</span>
+        <div style={{display:'flex',flexDirection:'column',gap:8,paddingBottom:72}}>
+          {silos.map(s=>{
+            const r=getMostCriticalReading(s);
+            return(
+              <ListItem key={s.id} tone={s.status} title={s.name}
+                subtitle={`${s.grain} · ${s.tons} t · ${offline?relTime(offlineMins):(s.lastUpdate||'Hace 5 min')}`}
+                value={r.value} valueUnit={r.unit}
+                onClick={()=>nav('silo',{silo:s})}/>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* FAB — agregar nuevo silo */}
+      <button
+        onClick={()=>!offline&&nav('agregar-silo')}
+        disabled={offline}
+        title={offline?'Requiere conexión':undefined}
+        style={{position:'absolute',bottom:72,right:20,width:52,height:52,borderRadius:'50%',
+          background:offline?'var(--surface-input)':'var(--action-primary)',border:offline?'1px solid var(--border-strong)':'none',cursor:offline?'not-allowed':'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          boxShadow:offline?'none':'0 4px 16px rgba(34,197,94,.35), 0 2px 6px rgba(0,0,0,.25)',
+          transition:'transform .15s ease, box-shadow .15s ease',zIndex:10}}
+        onMouseEnter={e=>{if(offline)return;e.currentTarget.style.transform='scale(1.08)';e.currentTarget.style.boxShadow='0 6px 20px rgba(34,197,94,.45), 0 3px 8px rgba(0,0,0,.3)'}}
+        onMouseLeave={e=>{if(offline)return;e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow='0 4px 16px rgba(34,197,94,.35), 0 2px 6px rgba(0,0,0,.25)'}}
+      >
+        <span style={{color:offline?'var(--text-muted)':'#fff',fontSize:26,fontWeight:300,lineHeight:1,userSelect:'none'}}>+</span>
+      </button>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCREEN 2 — Silo Detail
+   ═══════════════════════════════════════════════════════════════════════════ */
+function SiloScreen({silo,alerts,nav,lote,onIniciarLote,onFinalizarLote,deviceState='ok'}){
+  const [tab,setTab]=React.useState('info');
+  const [menuOpen,setMenuOpen]=React.useState(false);
+  const deviceOffline = deviceState!=='ok';
+  const deviceMins = deviceState==='device-offline-prolonged'?96:12;
+  const tc=silo.status==='critical'?'var(--status-critical)':silo.status==='warn'?'var(--status-warn)':'var(--action-primary)';
+  const sa=alerts.filter(a=>a.siloId===silo.id);
+  const badge={ok:'ok',warn:'warn',critical:'critical'}[silo.status]||'ok';
+  const badgeLbl=silo.status==='ok'?'OK':silo.status==='warn'?'Advertencia':'Crítico';
+  const tempTone=silo.status==='critical'?'critical':silo.status==='warn'?'warn':'ok';
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--surface-app)'}}>
+      <BackHeader title={silo.name} subtitle={`${silo.grain} · ${silo.tons} t`} onBack={()=>nav('dashboard')}
+        right={<div style={{display:'flex',alignItems:'center',gap:6,position:'relative'}}>
+          <StatusBadge tone={badge}>{badgeLbl}</StatusBadge>
+          <button onClick={()=>setMenuOpen(!menuOpen)} style={{...IB,width:32,height:32}}>
+            <Icon name="more-vertical" size={20}/>
+          </button>
+          {menuOpen&&<div style={{position:'absolute',top:36,right:0,zIndex:100,background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',boxShadow:'0 8px 24px rgba(0,0,0,.5)',overflow:'hidden',minWidth:210}}>
+            <button onClick={()=>{setMenuOpen(false);nav('editar-silo',{silo});}} style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'12px 16px',background:'transparent',border:'none',borderBottom:'1px solid var(--border-default)',cursor:'pointer',textAlign:'left'}}>
+              <Icon name="edit" size={16} color="var(--text-secondary)"/>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-primary)'}}>Editar silo</span>
+            </button>
+            <button onClick={()=>{setMenuOpen(false);nav('umbrales',{silo});}} style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'12px 16px',background:'transparent',border:'none',borderBottom:'1px solid var(--border-default)',cursor:'pointer',textAlign:'left'}}>
+              <Icon name="target" size={16} color="var(--text-secondary)"/>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-primary)'}}>Configurar umbrales</span>
+            </button>
+            {lote?(
+              <button onClick={()=>{if(deviceOffline)return;setMenuOpen(false);onFinalizarLote(lote);}} disabled={deviceOffline}
+                style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'12px 16px',background:'transparent',border:'none',borderBottom:'1px solid var(--border-default)',cursor:deviceOffline?'not-allowed':'pointer',textAlign:'left',opacity:deviceOffline?.45:1}}>
+                <Icon name="check-circle" size={16} color="var(--action-primary)"/>
+                <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-primary)'}}>Finalizar lote</span>
+              </button>
+            ):(
+              <button onClick={()=>{if(deviceOffline)return;setMenuOpen(false);onIniciarLote(silo);}} disabled={deviceOffline}
+                style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'12px 16px',background:'transparent',border:'none',borderBottom:'1px solid var(--border-default)',cursor:deviceOffline?'not-allowed':'pointer',textAlign:'left',opacity:deviceOffline?.45:1}}>
+                <Icon name="plus-circle" size={16} color="var(--text-secondary)"/>
+                <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-primary)'}}>Iniciar lote</span>
+              </button>
+            )}
+            <button onClick={()=>{setMenuOpen(false);nav('editar-silo',{silo,autoDelete:true});}} style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'12px 16px',background:'transparent',border:'none',cursor:'pointer',textAlign:'left'}}>
+              <Icon name="trash" size={16} color="var(--status-critical)"/>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--status-critical)'}}>Eliminar silo</span>
+            </button>
+          </div>}
+        </div>}/>
+
+      <div style={{paddingTop:12}}>
+        {deviceOffline&&(
+          <div style={{paddingBottom:4}}>
+            <DeviceOfflineBanner minutesOffline={deviceMins} onContactSupport={()=>nav('alert-detail',{alert:sa[0]||alerts[0]})}/>
+          </div>
+        )}
+        <LoteStatusCard lote={lote} onIniciar={()=>onIniciarLote(silo)} onVerPasaporte={()=>lote&&nav('pasaporte',{lote})}/>
+      </div>
+
+      {/* sensor grid — abbreviated label for Temp. to prevent wrap in tight 1/3 columns */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,padding:'12px 16px',flexShrink:0,opacity:deviceOffline?.55:1,transition:'opacity .2s'}}>
+        <SensorStat kind="temp"     value={silo.temp} label="Temp."   tone={tempTone} onClick={()=>nav('historial',{silo,variable:'temp'})} style={{cursor:'pointer'}}/>
+        <SensorStat kind="humidity" value={silo.hum}  label="Humedad" tone={silo.hum>16?'warn':'ok'} onClick={()=>nav('historial',{silo,variable:'hum'})} style={{cursor:'pointer'}}/>
+        <SensorStat kind="co2"      value={silo.co2}  label="CO₂"     tone={silo.co2>600?'warn':'ok'} onClick={()=>nav('historial',{silo,variable:'co2'})} style={{cursor:'pointer'}}/>
+      </div>
+
+      <div style={{padding:'0 16px',flexShrink:0}}>
+        <Tabs
+          items={[{id:'info',label:'Información'},{id:'alertas',label:`Alertas${sa.length?` (${sa.length})`:''}`}]}
+          activeId={tab} onChange={setTab}/>
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',padding:16}}>
+        {tab==='info'?(<>
+          <span style={LBL}>Información del grano</span>
+          <div style={{background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',padding:'0 14px',marginBottom:16}}>
+            {[['Tipo de grano',silo.grain],['Tonelaje',`${silo.tons} t`],['Fecha de acopio',silo.acopio]].map(([k,v],i)=>(
+              <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 0',borderBottom:i<2?'1px solid var(--border-default)':'none'}}>
+                <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-secondary)'}}>{k}</span>
+                <span style={{fontFamily:'var(--font-sans)',fontSize:14,fontWeight:600,color:'var(--text-primary)'}}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <span style={LBL}>Pronóstico — próximos 3 días</span>
+          <div style={{background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',padding:14,marginBottom:16}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+              {[{day:'Hoy',icon:'☀️',ext:32,risk:'Bajo'},{day:'Mañana',icon:'⛅',ext:28,risk:'Medio'},{day:'Pasado',icon:'🌧️',ext:22,risk:'Bajo'}].map(f=>(
+                <div key={f.day} style={{textAlign:'center',padding:'8px 4px'}}>
+                  <div style={{fontFamily:'var(--font-sans)',fontSize:11,color:'var(--text-muted)',marginBottom:6}}>{f.day}</div>
+                  <div style={{fontSize:22,marginBottom:4}}>{f.icon}</div>
+                  <div style={{fontFamily:'var(--font-sans)',fontSize:14,fontWeight:600,color:'var(--text-primary)'}}>{f.ext}°C</div>
+                  <div style={{fontFamily:'var(--font-sans)',fontSize:10,color:f.risk==='Medio'?'var(--status-warn)':'var(--status-ok)',fontWeight:600,marginTop:4}}>Riesgo {f.risk}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <span style={LBL}>Temperatura — últimos 7 días</span>
+          <div style={{background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',padding:14}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:10}}>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:24,fontWeight:700,color:'var(--text-primary)'}}>{silo.temp} °C</span>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:12,color:tc,fontWeight:500}}>
+                {silo.status==='critical'?'↑ Crítico':silo.status==='warn'?'↑ Elevado':'→ Estable'}
+              </span>
+            </div>
+            <Sparkline data={silo.trend} color={tc}/>
+          </div>
+          <button onClick={()=>nav('historial',{silo,variable:'temp'})} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,width:'100%',padding:'10px',background:'transparent',border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)',cursor:'pointer',marginTop:8}}>
+            <span style={{fontFamily:'var(--font-sans)',fontSize:13,fontWeight:500,color:'var(--action-primary)'}}>Ver historial completo</span>
+            <Icon name="chevron-right" size={14} color="var(--action-primary)"/>
+          </button>
+        </>):(
+          sa.length===0
+            ?<EmptyState variant="no-alerts" size="sm" title="Sin alertas" body="Este silo no tiene alertas registradas."/>
+            :<div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {sa.map(a=>(
+                <AlertCard key={a.id} variant={a.variant} title={a.title} silo={a.time}
+                  description={a.desc} action={a.action} resolutionNote={a.resolutionNote}
+                  onClick={a.status==='active'?()=>nav('alert-detail',{alert:a}):undefined}/>
+              ))}
+            </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCREEN 3 — Alerts List
+   ═══════════════════════════════════════════════════════════════════════════ */
+function AlertsScreen({alerts,nav}){
+  const [tab,setTab]=React.useState('todas');
+  const active  =alerts.filter(a=>a.status==='active');
+  const critical=alerts.filter(a=>a.status==='active'&&a.variant==='critical');
+  const warnings=alerts.filter(a=>a.status==='active'&&a.variant==='warning');
+  const resolved=alerts.filter(a=>a.status==='resolved');
+  const list=tab==='todas'?alerts:tab==='criticas'?critical:tab==='advertencias'?warnings:resolved;
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--surface-app)'}}>
+      <div style={{padding:'16px 16px 12px',flexShrink:0}}>
+        <h1 style={{fontFamily:'var(--font-sans)',fontSize:26,fontWeight:700,color:'var(--text-primary)',letterSpacing:'-0.3px',margin:0}}>Alertas</h1>
+      </div>
+      <div style={{padding:'0 16px 12px',flexShrink:0}}>
+        <Tabs items={[
+          {id:'todas',        label:'Todas',        count:alerts.length},
+          {id:'criticas',     label:'Críticas',     count:critical.length},
+          {id:'advertencias', label:'Advertencias', count:warnings.length},
+          {id:'resueltas',    label:'Resueltas',    count:resolved.length},
+        ]} activeId={tab} onChange={setTab}/>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'0 16px 16px'}}>
+        {list.length===0
+          ?<EmptyState variant={tab==='resueltas'?'empty':'no-alerts'} size="sm"
+              title={tab==='todas'?'Sin alertas':tab==='criticas'?'Sin alertas críticas':tab==='advertencias'?'Sin advertencias':'Sin resueltas'}
+              body={tab==='todas'?'Todos los silos están en orden.':tab==='resueltas'?'Aún no resolviste ninguna alerta.':'No hay alertas de este tipo en la temporada.'}/>
+          :<div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {list.map(a=>(
+              <AlertCard key={a.id} variant={a.variant} title={a.title} silo={a.silo}
+                time={a.time} description={a.desc} action={a.action} estimate={a.estimate}
+                resolutionNote={a.resolutionNote}
+                onClick={a.status==='active'?()=>nav('alert-detail',{alert:a}):undefined}/>
+            ))}
+          </div>}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCREEN 4 — Alert Detail
+   ═══════════════════════════════════════════════════════════════════════════ */
+const RESOLUTION_ACTIONS=[
+  {id:'aire',label:'Encendí aireación'},
+  {id:'insp',label:'Inspeccioné el silo'},
+  {id:'tec', label:'Llamé al técnico'},
+  {id:'otro',label:'Otro'},
+];
+
+function AlertDetailScreen({alert,nav,onResolve,offline=false}){
+  const [open,  setOpen]  =React.useState(false);
+  const [picked,setPicked]=React.useState('');
+  const [note,  setNote]  =React.useState('');
+  const [done,  setDone]  =React.useState(false);
+
+  const cr=alert.variant==='critical';
+  const ac=cr?'var(--status-critical)':'var(--status-warn)';
+  const sensorKind={temp:'temp',humidity:'humidity',co2:'co2'}[alert.sensor]||'temp';
+  const sensorLabel={temp:'Temp.',humidity:'Humedad',co2:'CO₂'}[alert.sensor]||'Lectura';
+
+  const confirm=()=>{
+    setDone(true);
+    setOpen(false);
+    setTimeout(()=>onResolve(alert.id,note||picked),350);
+  };
+
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--surface-app)'}}>
+      <BackHeader title="Detalle de alerta" onBack={()=>nav('alerts')}/>
+
+      <div style={{flex:1,overflowY:'auto',padding:16,display:'flex',flexDirection:'column',gap:14}}>
+
+        {/* severity header card */}
+        <div style={{background:cr?'rgba(239,68,68,.07)':'rgba(234,179,8,.07)',border:`1px solid ${ac}`,
+          borderRadius:'var(--radius-lg)',padding:16,display:'flex',gap:12,alignItems:'flex-start'}}>
+          <span style={{display:'flex',alignItems:'center',justifyContent:'center',width:44,height:44,
+            borderRadius:'var(--radius-md)',background:cr?'rgba(239,68,68,.12)':'rgba(234,179,8,.12)',
+            color:ac,flexShrink:0}}>
+            <Icon name="alert-triangle" size={22}/>
+          </span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
+              <StatusBadge tone={cr?'critical':'warn'}>{cr?'Crítica':'Advertencia'}</StatusBadge>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:12,color:'var(--text-secondary)'}}>{alert.time}</span>
+            </div>
+            <h2 style={{fontFamily:'var(--font-sans)',fontSize:17,fontWeight:700,color:'var(--text-primary)',letterSpacing:'-0.2px',margin:'0 0 3px'}}>{alert.title}</h2>
+            <p style={{fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-secondary)',margin:0}}>{alert.silo}</p>
+          </div>
+        </div>
+
+        {/* reading vs threshold — ThresholdStat mirrors SensorStat exactly */}
+        <div>
+          <span style={LBL}>Lectura registrada</span>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <SensorStat kind={sensorKind} value={alert.value} label={sensorLabel} tone={cr?'critical':'warn'}/>
+            <ThresholdStat value={alert.threshold}/>
+          </div>
+        </div>
+
+        {/* ¿Qué está pasando? */}
+        <div>
+          <span style={LBL}>¿Qué está pasando?</span>
+          <div style={{background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',padding:'13px 14px'}}>
+            <p style={{fontFamily:'var(--font-sans)',fontSize:14,lineHeight:1.6,color:'var(--text-secondary)',margin:0}}>{alert.desc}</p>
+          </div>
+        </div>
+
+        {/* ¿Dónde? */}
+        <div>
+          <span style={LBL}>¿Dónde?</span>
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',
+            background:'var(--surface-card)',border:'1px solid var(--border-default)',
+            borderRadius:'var(--radius-md)'}}>
+            <span style={{display:'flex',flexShrink:0,color:'var(--text-secondary)'}}><Icon name="map-pin" size={16}/></span>
+            <span style={{fontFamily:'var(--font-sans)',fontSize:14,fontWeight:500,color:'var(--text-primary)'}}>{alert.silo}</span>
+          </div>
+        </div>
+
+        {/* ¿Cuánto tiempo tenés? */}
+        {alert.estimate&&(
+          <div>
+            <span style={LBL}>¿Cuánto tiempo tenés?</span>
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',
+              background:'rgba(239,68,68,.06)',border:'1px solid var(--status-critical)',borderRadius:'var(--radius-md)'}}>
+              <Icon name="clock" size={15} color="var(--status-critical)"/>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:13,fontWeight:600,color:'var(--status-critical)'}}>{alert.estimate}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ¿Qué hacer? */}
+        {alert.action&&(
+          <div>
+            <span style={LBL}>¿Qué hacer?</span>
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',
+              background:'var(--surface-input)',border:'1px solid var(--border-default)',
+              borderRadius:'var(--radius-md)'}}>
+              <span style={{display:'flex',flexShrink:0,color:'var(--action-primary)'}}><Icon name="info" size={16}/></span>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:14,fontWeight:500,color:'var(--text-primary)'}}>{alert.action}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* sticky action bar */}
+      <div style={{padding:'12px 16px',borderTop:'1px solid var(--border-default)',background:'var(--surface-app)',display:'flex',flexDirection:'column',gap:8,flexShrink:0}}>
+        <Button variant="secondary" style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}
+          onClick={()=>{const s=SILOS.find(x=>x.name===alert.silo);if(s)nav('historial',{silo:s,variable:alert.sensor||'temp'});}}>
+          <Icon name="trending-up" size={16}/>Ver historial de sensores
+        </Button>
+        <Button variant="secondary" style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}
+          onClick={()=>nav('contacto-tecnico',{alert})}>
+          <Icon name="phone" size={16}/>Contactar técnico
+        </Button>
+        <Button variant="primary" style={{width:'100%'}} onClick={()=>setOpen(true)} disabled={done||offline}>
+          {done?'✓ Resuelta':'Marcar como resuelta'}
+        </Button>
+        {offline&&!done&&<DisabledHint>Necesitás conexión para marcar como resuelta — quedará pendiente de sincronizar</DisabledHint>}
+      </div>
+
+      {/* resolution bottom sheet */}
+      <BottomSheet open={open} onClose={()=>setOpen(false)} title="Marcar como resuelta"
+        actions={[
+          <Button key="ok" variant="primary"   style={{width:'100%'}} onClick={confirm} disabled={!picked}>Confirmar resolución</Button>,
+          <Button key="no" variant="ghost"     style={{width:'100%'}} onClick={()=>setOpen(false)}>Cancelar</Button>,
+        ]}>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <p style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-secondary)',margin:0}}>¿Qué acción tomaste?</p>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {RESOLUTION_ACTIONS.map(o=>(
+              <button key={o.id} onClick={()=>setPicked(o.label)} style={{
+                display:'flex',alignItems:'center',gap:12,padding:'11px 14px',
+                background:picked===o.label?'var(--green-tint)':'var(--surface-input)',
+                border:`1px solid ${picked===o.label?'var(--action-primary)':'var(--border-default)'}`,
+                borderRadius:'var(--radius-md)',cursor:'pointer',textAlign:'left',transition:'all .15s'}}>
+                <span style={{width:18,height:18,borderRadius:'50%',
+                  border:`2px solid ${picked===o.label?'var(--action-primary)':'var(--border-default)'}`,
+                  display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  {picked===o.label&&<span style={{width:8,height:8,borderRadius:'50%',background:'var(--action-primary)'}}/>}
+                </span>
+                <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-primary)',fontWeight:picked===o.label?600:400}}>{o.label}</span>
+              </button>
+            ))}
+          </div>
+          <div>
+            <span style={{...LBL,marginBottom:6}}>Notas (opcional)</span>
+            <textarea value={note} onChange={e=>setNote(e.target.value)} rows={3}
+              placeholder="Ej: Encendí la aireación a las 14:30 por 2 horas."
+              style={{width:'100%',padding:'10px 12px',background:'var(--surface-input)',
+                border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)',
+                color:'var(--text-primary)',resize:'none',outline:'none',
+                fontFamily:'var(--font-sans)',fontSize:14,lineHeight:1.5,boxSizing:'border-box'}}/>
+          </div>
+        </div>
+      </BottomSheet>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCREEN 17 — Agregar silo
+   ═══════════════════════════════════════════════════════════════════════════ */
+const WIFI_NETS=[{id:'w1',name:'Red_campo_01',sig:3},{id:'w2',name:'SiloNet_Pro',sig:2},{id:'w3',name:'Red_campo_02',sig:2},{id:'w4',name:'iPhone de Lucas',sig:1}];
+const GRAIN_OPTS=['Soja','Maíz','Trigo','Girasol','Otro'];
+
+function AgregarSiloScreen({nav,onAdd}){
+  const [step,setStep]=React.useState(1);
+  const [sub,setSub]=React.useState('qr');
+  const [scan,setScan]=React.useState('idle');
+  const [wifi,setWifi]=React.useState(null);
+  const [pass,setPass]=React.useState('');
+  const [conn,setConn]=React.useState(false);
+  const [nombre,setNombre]=React.useState('');
+  const [tipo,setTipo]=React.useState('Silo fijo');
+  const [tons,setTons]=React.useState('');
+  const [fechaAcopio,setFechaAcopio]=React.useState(new Date().toISOString().slice(0,10));
+  const [grano,setGrano]=React.useState('Soja');
+  const [granoCustom,setGranoCustom]=React.useState('');
+  const [saving,setSaving]=React.useState(false);
+  const [saved,setSaved]=React.useState(false);
+
+  const simulateScan=()=>{
+    setScan('scanning');
+    setTimeout(()=>{setScan('ok');setTimeout(()=>setSub('wifi'),600);},1400);
+  };
+  const connectWifi=()=>{
+    setConn(true);
+    setTimeout(()=>{setConn(false);setStep(2);},1600);
+  };
+  const saveSilo=()=>{
+    if(!nombre.trim())return;
+    setSaving(true);
+    setTimeout(()=>{
+      setSaving(false);setSaved(true);
+      const finalGrano=grano==='Otro'&&granoCustom.trim()?granoCustom.trim():grano;
+      onAdd&&onAdd({id:Date.now(),name:nombre,storage:tipo,tons:Number(tons)||0,grain:finalGrano,storedOn:fechaAcopio,status:'ok',temp:22,hum:13,co2:410,trend:[22,22,22,22,22,22,22],lastUpdate:'Ahora'});
+      setTimeout(()=>nav('dashboard'),700);
+    },1200);
+  };
+
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--surface-app)'}}>
+      <BackHeader title="Agregar silo" onBack={()=>nav('dashboard')}/>
+
+      {/* progress bar */}
+      <div style={{padding:'12px 16px 8px',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+          {[1,2].map(n=>(
+            <React.Fragment key={n}>
+              <div style={{width:28,height:28,borderRadius:'50%',
+                background:step>=n?'var(--action-primary)':'var(--surface-input)',
+                border:`1px solid ${step>=n?'var(--action-primary)':'var(--border-default)'}`,
+                display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .2s'}}>
+                <span style={{fontFamily:'var(--font-sans)',fontSize:12,fontWeight:700,color:step>=n?'#fff':'var(--text-muted)'}}>{n}</span>
+              </div>
+              {n<2&&<div style={{flex:1,height:2,background:step>=2?'var(--action-primary)':'var(--surface-input)',transition:'background .3s',borderRadius:2}}/>}
+            </React.Fragment>
+          ))}
+        </div>
+        <span style={{fontFamily:'var(--font-sans)',fontSize:12,color:'var(--text-muted)'}}>
+          {step===1?(sub==='qr'?'Paso 1 de 2 — Escaneo QR':'Paso 1 de 2 — Conexión WiFi'):'Paso 2 de 2 — Datos del silo'}
+        </span>
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',padding:16}}>
+
+        {/* ── STEP 1a: QR ── */}
+        {step===1&&sub==='qr'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{textAlign:'center',padding:'4px 0 8px'}}>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:16,fontWeight:600,color:'var(--text-primary)',display:'block',marginBottom:6}}>Escaneá el QR de tu lanza</span>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-secondary)'}}>El código QR está impreso en el lateral de la lanza SiloGuard.</span>
+            </div>
+
+            {/* camera viewport */}
+            <div style={{position:'relative',background:'#000',borderRadius:'var(--radius-lg)',overflow:'hidden',aspectRatio:'1',border:'1px solid var(--border-default)'}}>
+              <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse at 60% 40%,#1a2a1a 0%,#060606 100%)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {scan==='ok'
+                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+                    <div style={{width:56,height:56,borderRadius:'50%',background:'rgba(34,197,94,.15)',border:'2px solid var(--action-primary)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <Icon name="check" size={28} color="var(--action-primary)"/>
+                    </div>
+                    <span style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--action-primary)',fontWeight:600}}>QR detectado</span>
+                  </div>
+                  :scan==='scanning'
+                  ?<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+                    <div style={{width:36,height:36,borderRadius:'50%',border:'3px solid var(--action-primary)',borderTopColor:'transparent',animation:'spin .8s linear infinite'}}/>
+                    <span style={{fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-secondary)'}}>Leyendo QR…</span>
+                  </div>
+                  :<span style={{fontFamily:'var(--font-sans)',fontSize:12,color:'rgba(255,255,255,.2)'}}>Vista de cámara</span>
+                }
+              </div>
+              {['tl','tr','bl','br'].map(c=>(
+                <div key={c} style={{position:'absolute',
+                  top:c[0]==='t'?16:'auto',bottom:c[0]==='b'?16:'auto',
+                  left:c[1]==='l'?16:'auto',right:c[1]==='r'?16:'auto',
+                  width:22,height:22,
+                  borderTop:   c[0]==='t'?'3px solid var(--action-primary)':'none',
+                  borderBottom:c[0]==='b'?'3px solid var(--action-primary)':'none',
+                  borderLeft:  c[1]==='l'?'3px solid var(--action-primary)':'none',
+                  borderRight: c[1]==='r'?'3px solid var(--action-primary)':'none',
+                }}/>
+              ))}
+            </div>
+
+            <Button variant="primary" style={{width:'100%'}} onClick={simulateScan} disabled={scan!=='idle'}>
+              {scan==='idle'?'Simular escaneo':scan==='scanning'?'Leyendo…':'QR leído ✓'}
+            </Button>
+            <button onClick={()=>{}} style={{background:'none',border:'none',color:'var(--text-secondary)',fontFamily:'var(--font-sans)',fontSize:13,cursor:'pointer',textDecoration:'underline',textUnderlineOffset:3,textAlign:'center'}}>
+              ¿No encontrás el código QR?
+            </button>
+          </div>
+        )}
+
+        {/* ── STEP 1b: WiFi ── */}
+        {step===1&&sub==='wifi'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{textAlign:'center',padding:'4px 0 8px'}}>
+              <div style={{width:52,height:52,borderRadius:'50%',background:'var(--green-tint)',border:'1px solid rgba(34,197,94,.25)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 12px'}}>
+                <Icon name="wifi" size={24} color="var(--action-primary)"/>
+              </div>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:16,fontWeight:600,color:'var(--text-primary)',display:'block',marginBottom:6}}>Conectá la lanza al WiFi</span>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-secondary)'}}>Seleccioná la red del campo para que la lanza pueda transmitir datos.</span>
+            </div>
+            <div style={{background:'var(--surface-card)',border:'1px solid var(--border-default)',borderRadius:'var(--radius-lg)',overflow:'hidden'}}>
+              {WIFI_NETS.map((n,i)=>(
+                <button key={n.id} onClick={()=>setWifi(n.id)}
+                  style={{display:'flex',alignItems:'center',gap:12,width:'100%',padding:'13px 14px',
+                    background:wifi===n.id?'var(--green-tint)':'transparent',
+                    border:'none',
+                    borderBottom:i<WIFI_NETS.length-1?'1px solid var(--border-default)':'none',
+                    cursor:'pointer',textAlign:'left',transition:'background .15s'}}>
+                  <Icon name="wifi" size={16} color={wifi===n.id?'var(--action-primary)':'var(--text-secondary)'}/>
+                  <span style={{flex:1,fontFamily:'var(--font-sans)',fontSize:14,color:wifi===n.id?'var(--text-primary)':'var(--text-secondary)',fontWeight:wifi===n.id?600:400}}>{n.name}</span>
+                  {wifi===n.id&&<Icon name="check" size={16} color="var(--action-primary)"/>}
+                </button>
+              ))}
+            </div>
+            {wifi&&(
+              <div>
+                <span style={{...LBL,marginBottom:6}}>CONTRASEÑA DE LA RED</span>
+                <input type="password" value={pass} onChange={e=>setPass(e.target.value)}
+                  placeholder="Contraseña WiFi"
+                  style={{width:'100%',padding:'11px 12px',background:'var(--surface-input)',
+                    border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)',
+                    color:'var(--text-primary)',fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box'}}/>
+              </div>
+            )}
+            <Button variant="primary" style={{width:'100%'}} onClick={connectWifi} disabled={!wifi||conn}>
+              {conn?'Conectando…':'Conectar'}
+            </Button>
+          </div>
+        )}
+
+        {/* ── STEP 2: Asignación ── */}
+        {step===2&&(
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',
+              background:'var(--green-tint)',border:'1px solid rgba(34,197,94,.25)',borderRadius:'var(--radius-lg)'}}>
+              <Icon name="check-circle" size={18} color="var(--action-primary)"/>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:13,fontWeight:600,color:'var(--action-primary)'}}>Lanza conectada correctamente</span>
+            </div>
+            <div>
+              <span style={{...LBL,marginBottom:6}}>NOMBRE DEL SILO</span>
+              <input value={nombre} onChange={e=>setNombre(e.target.value)}
+                placeholder="Ej: Silo Norte, Bolsa 3"
+                style={{width:'100%',padding:'11px 12px',background:'var(--surface-input)',
+                  border:`1px solid ${nombre?'var(--action-primary)':'var(--border-default)'}`,
+                  borderRadius:'var(--radius-md)',color:'var(--text-primary)',
+                  fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box',transition:'border .15s'}}/>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:11,color:'var(--text-muted)',marginTop:4,display:'block'}}>Podés cambiarlo en cualquier momento.</span>
+            </div>
+            <div>
+              <span style={{...LBL,marginBottom:6}}>TIPO DE ALMACENAMIENTO</span>
+              <div style={{display:'flex',gap:8}}>
+                {['Silo fijo','Silobolsa'].map(t=>(
+                  <button key={t} onClick={()=>setTipo(t)} style={{flex:1,padding:'10px 8px',
+                    background:tipo===t?'var(--green-tint)':'var(--surface-input)',
+                    border:`1px solid ${tipo===t?'var(--action-primary)':'var(--border-default)'}`,
+                    borderRadius:'var(--radius-md)',color:tipo===t?'var(--text-primary)':'var(--text-secondary)',
+                    fontFamily:'var(--font-sans)',fontSize:13,fontWeight:tipo===t?600:400,
+                    cursor:'pointer',transition:'all .15s'}}>{t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span style={{...LBL,marginBottom:6}}>TONELAJE ESTIMADO <span style={{textTransform:'none',fontWeight:400,letterSpacing:0}}>(opcional)</span></span>
+              <div style={{position:'relative'}}>
+                <input type="number" value={tons} onChange={e=>setTons(e.target.value)} placeholder="0"
+                  style={{width:'100%',padding:'11px 40px 11px 12px',background:'var(--surface-input)',
+                    border:'1px solid var(--border-default)',borderRadius:'var(--radius-md)',
+                    color:'var(--text-primary)',fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box'}}/>
+                <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-muted)'}}>t</span>
+              </div>
+            </div>
+            <div>
+              <span style={{...LBL,marginBottom:6}}>FECHA DE ACOPIO</span>
+              <div style={{position:'relative'}}>
+                <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',display:'flex',color:'var(--text-muted)',pointerEvents:'none'}}>
+                  <Icon name="clock" size={16}/>
+                </span>
+                <input type="date" value={fechaAcopio} onChange={e=>setFechaAcopio(e.target.value)}
+                  max={new Date().toISOString().slice(0,10)}
+                  style={{width:'100%',padding:'11px 12px 11px 38px',background:'var(--surface-input)',
+                    border:`1px solid ${fechaAcopio?'var(--action-primary)':'var(--border-default)'}`,
+                    borderRadius:'var(--radius-md)',color:'var(--text-primary)',
+                    fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box',
+                    colorScheme:'dark',transition:'border .15s'}}/>
+              </div>
+              <span style={{fontFamily:'var(--font-sans)',fontSize:11,color:'var(--text-muted)',marginTop:4,display:'block'}}>Cuándo empezó a almacenarse el grano.</span>
+            </div>
+            <div>
+              <span style={{...LBL,marginBottom:6}}>TIPO DE GRANO <span style={{textTransform:'none',fontWeight:400,letterSpacing:0}}>(opcional)</span></span>
+              <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                {GRAIN_OPTS.map(g=>(
+                  <button key={g} onClick={()=>setGrano(g)} style={{
+                    padding:'8px 14px',
+                    background:grano===g?'var(--green-tint)':'var(--surface-input)',
+                    border:`1px solid ${grano===g?'var(--action-primary)':'var(--border-default)'}`,
+                    borderRadius:'var(--radius-full)',color:grano===g?'var(--text-primary)':'var(--text-secondary)',
+                    fontFamily:'var(--font-sans)',fontSize:13,fontWeight:grano===g?600:400,
+                    cursor:'pointer',transition:'all .15s'}}>{g}
+                  </button>
+                ))}
+              </div>
+              {grano==='Otro'&&(
+                <input value={granoCustom} onChange={e=>setGranoCustom(e.target.value)}
+                  placeholder="Escribí el tipo de grano"
+                  style={{marginTop:8,width:'100%',padding:'10px 12px',background:'var(--surface-input)',
+                    border:'1px solid var(--action-primary)',borderRadius:'var(--radius-md)',
+                    color:'var(--text-primary)',fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box'}}/>
+              )}
+            </div>
+            <Button variant="primary" style={{width:'100%',marginTop:4}} onClick={saveSilo} disabled={!nombre.trim()||saving||saved}>
+              {saved?'✓ Silo creado':saving?'Guardando…':'Guardar y continuar'}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCREEN 18 — Editar / Eliminar silo
+   ═══════════════════════════════════════════════════════════════════════════ */
+function EditarSiloScreen({silo,nav,onSave,onDelete,autoDelete}){
+  const [nombre,setNombre]=React.useState(silo.name);
+  const [tipo,setTipo]=React.useState(silo.storage||'Silo fijo');
+  const [tons,setTons]=React.useState(String(silo.tons||''));
+  const [grano,setGrano]=React.useState(silo.grain||'Soja');
+  const [granoCustom,setGranoCustom]=React.useState(GRAIN_OPTS.includes(silo.grain)?'':silo.grain||'');
+  const [saving,setSaving]=React.useState(false);
+  const [saved,setSaved]=React.useState(false);
+  const [showDel,setShowDel]=React.useState(autoDelete||false);
+  const [deleting,setDeleting]=React.useState(false);
+
+  const finalGrano=grano==='Otro'&&granoCustom.trim()?granoCustom.trim():grano;
+  const changed=nombre!==silo.name||tipo!==(silo.storage||'Silo fijo')||tons!==String(silo.tons||'')||finalGrano!==silo.grain;
+
+  const save=()=>{
+    if(!nombre.trim())return;
+    setSaving(true);
+    const updated={...silo,name:nombre,storage:tipo,tons:Number(tons)||silo.tons,grain:finalGrano};
+    setTimeout(()=>{setSaving(false);setSaved(true);onSave&&onSave(updated);setTimeout(()=>nav('silo',{silo:updated}),600);},1000);
+  };
+
+  const [deleted,setDeleted]=React.useState(false);
+  const deleteSilo=()=>{
+    setDeleting(true);
+    setTimeout(()=>{
+      onDelete&&onDelete(silo.id);
+      setDeleting(false);
+      setDeleted(true);
+      setTimeout(()=>nav('dashboard'),1800);
+    },900);
+  };
+
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--surface-app)'}}>
+      <BackHeader title="Editar silo" subtitle={silo.name} onBack={()=>nav('silo',{silo})}/>
+
+      <div style={{flex:1,overflowY:'auto',padding:16,display:'flex',flexDirection:'column',gap:16}}>
+        <div>
+          <span style={{...LBL,marginBottom:6}}>NOMBRE DEL SILO</span>
+          <input value={nombre} onChange={e=>setNombre(e.target.value)}
+            style={{width:'100%',padding:'11px 12px',background:'var(--surface-input)',
+              border:`1px solid ${nombre!==silo.name?'var(--action-primary)':'var(--border-default)'}`,
+              borderRadius:'var(--radius-md)',color:'var(--text-primary)',
+              fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box',transition:'border .15s'}}/>
+        </div>
+        <div>
+          <span style={{...LBL,marginBottom:6}}>TIPO DE ALMACENAMIENTO</span>
+          <div style={{display:'flex',gap:8}}>
+            {['Silo fijo','Silobolsa'].map(t=>(
+              <button key={t} onClick={()=>setTipo(t)} style={{flex:1,padding:'10px 8px',
+                background:tipo===t?'var(--green-tint)':'var(--surface-input)',
+                border:`1px solid ${tipo===t?'var(--action-primary)':'var(--border-default)'}`,
+                borderRadius:'var(--radius-md)',color:tipo===t?'var(--text-primary)':'var(--text-secondary)',
+                fontFamily:'var(--font-sans)',fontSize:13,fontWeight:tipo===t?600:400,
+                cursor:'pointer',transition:'all .15s'}}>{t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span style={{...LBL,marginBottom:6}}>TONELAJE ESTIMADO</span>
+          <div style={{position:'relative'}}>
+            <input type="number" value={tons} onChange={e=>setTons(e.target.value)}
+              style={{width:'100%',padding:'11px 40px 11px 12px',background:'var(--surface-input)',
+                border:`1px solid ${tons!==String(silo.tons||'')?'var(--action-primary)':'var(--border-default)'}`,
+                borderRadius:'var(--radius-md)',color:'var(--text-primary)',
+                fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box',transition:'border .15s'}}/>
+            <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',fontFamily:'var(--font-sans)',fontSize:13,color:'var(--text-muted)'}}>t</span>
+          </div>
+        </div>
+        <div>
+          <span style={{...LBL,marginBottom:6}}>TIPO DE GRANO</span>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+            {GRAIN_OPTS.map(g=>(
+              <button key={g} onClick={()=>setGrano(g)} style={{
+                padding:'8px 14px',
+                background:grano===g?'var(--green-tint)':'var(--surface-input)',
+                border:`1px solid ${grano===g?'var(--action-primary)':'var(--border-default)'}`,
+                borderRadius:'var(--radius-full)',color:grano===g?'var(--text-primary)':'var(--text-secondary)',
+                fontFamily:'var(--font-sans)',fontSize:13,fontWeight:grano===g?600:400,
+                cursor:'pointer',transition:'all .15s'}}>{g}
+              </button>
+            ))}
+          </div>
+          {grano==='Otro'&&(
+            <input value={granoCustom} onChange={e=>setGranoCustom(e.target.value)}
+              placeholder="Escribí el tipo de grano"
+              style={{marginTop:8,width:'100%',padding:'10px 12px',background:'var(--surface-input)',
+                border:'1px solid var(--action-primary)',borderRadius:'var(--radius-md)',
+                color:'var(--text-primary)',fontFamily:'var(--font-sans)',fontSize:14,outline:'none',boxSizing:'border-box'}}/>
+          )}
+        </div>
+
+        <Button variant="primary" style={{width:'100%'}} onClick={save} disabled={!changed||saving||saved||!nombre.trim()}>
+          {saved?'✓ Cambios guardados':saving?'Guardando…':'Guardar cambios'}
+        </Button>
+
+        {/* danger zone */}
+        <div style={{marginTop:4}}>
+          <div style={{height:1,background:'var(--border-default)',marginBottom:16}}/>
+          <button onClick={()=>setShowDel(true)}
+            style={{width:'100%',padding:'12px',background:'rgba(239,68,68,.06)',
+              border:'1px solid rgba(239,68,68,.3)',borderRadius:'var(--radius-md)',
+              color:'var(--status-critical)',fontFamily:'var(--font-sans)',fontSize:14,fontWeight:600,
+              cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,.12)'}
+            onMouseLeave={e=>e.currentTarget.style.background='rgba(239,68,68,.06)'}>
+            <Icon name="trash" size={16} color="var(--status-critical)"/>
+            Eliminar silo
+          </button>
+        </div>
+      </div>
+
+      {/* delete confirmation */}
+      {deleted&&(
+        <div style={{position:'fixed',bottom:32,left:'50%',transform:'translateX(-50%)',zIndex:200,
+          background:'var(--surface-card)',border:'1px solid var(--border-default)',
+          borderRadius:'var(--radius-lg)',padding:'12px 20px',
+          boxShadow:'0 8px 32px rgba(0,0,0,.45)',
+          display:'flex',alignItems:'center',gap:10,whiteSpace:'nowrap'}}>
+          <Icon name="check-circle" size={18} color="var(--action-primary)"/>
+          <span style={{fontFamily:'var(--font-sans)',fontSize:14,fontWeight:600,color:'var(--text-primary)'}}>{silo.name} eliminado</span>
+        </div>
+      )}
+      <BottomSheet open={showDel} onClose={()=>setShowDel(false)} title="Eliminar silo"
+        actions={[
+          <Button key="del" variant="primary"
+            style={{width:'100%',background:'var(--status-critical)',borderColor:'var(--status-critical)'}}
+            onClick={deleteSilo} disabled={deleting}>
+            {deleting?'Eliminando…':'Sí, eliminar'}
+          </Button>,
+          <Button key="no" variant="ghost" style={{width:'100%'}} onClick={()=>setShowDel(false)}>Cancelar</Button>,
+        ]}>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <p style={{fontFamily:'var(--font-sans)',fontSize:14,color:'var(--text-secondary)',margin:0,lineHeight:1.6}}>
+            ¿Estás seguro? Se eliminará <strong style={{color:'var(--text-primary)'}}>{silo.name}</strong> junto con todo su historial de sensores y alertas.
+          </p>
+          <div style={{display:'flex',alignItems:'flex-start',gap:8,padding:'10px 12px',
+            background:'rgba(239,68,68,.06)',border:'1px solid rgba(239,68,68,.2)',borderRadius:'var(--radius-md)'}}>
+            <Icon name="alert-triangle" size={14} color="var(--status-critical)"/>
+            <span style={{fontFamily:'var(--font-sans)',fontSize:12,color:'var(--status-critical)',lineHeight:1.5}}>Esta acción no se puede deshacer.</span>
+          </div>
+        </div>
+      </BottomSheet>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   APP SHELL
+   ═══════════════════════════════════════════════════════════════════════════ */
+function JumpBar({nav}){
+  const items=[
+    {l:'Dashboard',    to:'dashboard',    p:{}},
+    {l:'Silo Sur ⚠',  to:'silo',         p:{silo:SILOS[1]}},
+    {l:'Agregar silo', to:'agregar-silo', p:{}},
+    {l:'Editar silo',  to:'editar-silo',  p:{silo:SILOS[0]}},
+    {l:'Alertas',      to:'alerts',       p:{}},
+    {l:'Det. alerta',  to:'alert-detail', p:{alert:ALERTS_INIT[0]}},
+    {l:'Contactar técnico', to:'contacto-tecnico', p:{alert:ALERTS_INIT[0]}},
+    {l:'Calidad',      to:'calidad',      p:{}},
+    {l:'Perfil',       to:'perfil',       p:{}},
+    {l:'Historial',    to:'historial',    p:{silo:SILOS[1],variable:'temp'}},
+    {l:'Umbrales',     to:'umbrales',     p:{silo:SILOS[0]}},
+    {l:'Umbrales (⚠)', to:'umbrales',     p:{silo:SILOS[1]}},
+  ];
+  return(
+    <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap',justifyContent:'center'}}>
+      {items.map(it=>(
+        <button key={it.l} onClick={()=>nav(it.to,it.p)}
+          style={{padding:'5px 14px',background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.14)',
+            borderRadius:20,color:'rgba(255,255,255,.65)',fontFamily:'var(--font-sans)',fontSize:12,cursor:'pointer'}}>
+          {it.l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Toast helper ── */
+let _toastId=1;
+function useAppToasts(){
+  const [toasts,setToasts]=React.useState([]);
+  const add=React.useCallback((tone,title,message)=>{
+    const id=_toastId++;
+    setToasts(p=>[...p.slice(-2),{id,tone,title,message}]);
+    setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3800);
+  },[]);
+  const dismiss=React.useCallback(id=>setToasts(p=>p.filter(t=>t.id!==id)),[]);
+  return{toasts,add,dismiss};
+}
+
+function ToastOverlay({toasts,onDismiss}){
+  return(
+    <div style={{position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',zIndex:2000,display:'flex',flexDirection:'column',gap:8,width:'min(360px,calc(100vw - 32px))',pointerEvents:'none'}}>
+      {toasts.map(t=>(
+        <div key={t.id} style={{pointerEvents:'all',animation:'toastSlide .25s ease both'}}>
+          <Toast tone={t.tone} title={t.title} message={t.message} onDismiss={()=>onDismiss(t.id)}/>
+        </div>
+      ))}
+      <style>{`@keyframes toastSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    </div>
+  );
+}
+
+function App(){
+  // Permite forzar estados especiales vía URL cuando el panel de Tweaks no está
+  // disponible (p.ej. al abrir el .zip exportado fuera del editor):
+  // ?connState=offline-recent|offline-prolonged & deviceState=device-offline-recent|device-offline-prolonged
+  const urlDefaults=React.useMemo(()=>{
+    const p=new URLSearchParams(window.location.search);
+    const out={...TWEAK_DEFAULTS};
+    ['connState','deviceState','loteEstadoDemo','profileVariant'].forEach(k=>{
+      if(p.has(k)) out[k]=p.get(k);
+    });
+    return out;
+  },[]);
+  const [t,setTweak]=useTweaks(urlDefaults);
+  const [screen, setScreen] =React.useState('dashboard');
+  const [selSilo,setSelSilo]=React.useState(null);
+  const [selAlt, setSelAlt] =React.useState(null);
+  const [navTab, setNavTab] =React.useState('dashboard');
+  const [alerts, setAlerts] =React.useState(ALERTS_INIT);
+  const [profileData, setProfileData] =React.useState(window.SG.profile);
+  const [initialVar, setInitialVar] =React.useState('temp');
+  const [silos, setSilos] =React.useState(window.SG.silos);
+  const [autoDelete,setAutoDelete]=React.useState(false);
+  const [umbralesSilo,setUmbralesSilo]=React.useState(null);
+  const [selLote, setSelLote] =React.useState(LOTES_PASAPORTE[0]);
+  const [lotes, setLotes] =React.useState(LOTES_PASAPORTE);
+  const [iniciarLoteSilo,setIniciarLoteSilo]=React.useState(null);
+  const [finalizarLoteTarget,setFinalizarLoteTarget]=React.useState(null);
+  const toast=useAppToasts();
+
+  const nav=(to,p={})=>{
+    setScreen(to);
+    if(p.silo)  setSelSilo(p.silo);
+    if(p.variable) setInitialVar(p.variable);
+    setAutoDelete(p.autoDelete||false);
+    if(p.alert) setSelAlt(p.alert);
+    if(p.lote)  setSelLote(p.lote);
+    if(to==='dashboard') setNavTab('dashboard');
+    if(to==='alerts')    setNavTab('alertas');
+    if(to==='calidad')   setNavTab('calidad');
+    if(to==='perfil')    setNavTab('perfil');
+    if(to==='umbrales')  setUmbralesSilo(p.silo||null);
+  };
+
+  const iniciarLote=({name,silo})=>{
+    const nuevo={
+      id:genLoteId(), siloId:silo.id, name, grain:silo.grain, tons:silo.tons,
+      start:todayStr(), end:null, days:0, status:'monitoring',
+      score:estimateScore(silo.status), alertsResolved:0,
+      avg:{co2:silo.co2, temp:silo.temp, hum:silo.hum},
+    };
+    setLotes(prev=>[...prev,nuevo]);
+    setIniciarLoteSilo(null);
+    toast.add('ok','Lote iniciado',`${name} comenzó su seguimiento de calidad.`);
+  };
+
+  const finalizarLote=(lote)=>{
+    const cerrado={...lote,status:'finalized',end:todayStr()};
+    setLotes(prev=>prev.map(l=>l.id===lote.id?cerrado:l));
+    setFinalizarLoteTarget(null);
+    toast.add('ok','Certificado emitido',`El pasaporte de ${lote.name} ya está disponible.`);
+    nav('pasaporte',{lote:cerrado});
+  };
+
+  const resolve=(id,note)=>{
+    setAlerts(prev=>prev.map(a=>a.id===id?{...a,status:'resolved',variant:'resolved',resolutionNote:note||'Resuelta.'}:a));
+    toast.add('ok','Alerta resuelta','La alerta fue marcada como resuelta.');
+    nav('alerts');
+  };
+
+  const showNav=['dashboard','alerts','calidad','perfil'].includes(screen);
+  const active=alerts.filter(a=>a.status==='active');
+  const navTabs=[
+    {id:'dashboard',label:'Dashboard',icon:'home'},
+    {id:'alertas',  label:'Alertas',  icon:'bell',  badge:active.length||null},
+    {id:'calidad',label:'Calidad',icon:'clipboard'},
+    {id:'perfil',   label:'Perfil',   icon:'user'},
+  ];
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+      <JumpBar nav={nav}/>
+      <PhoneFrame>
+        <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+          {screen==='agregar-silo'&&<AgregarSiloScreen nav={nav} onAdd={s=>{setSilos(prev=>[...prev,s]);toast.add('ok','Silo creado',`${s.name} fue agregado correctamente.`);}}/>}
+          {screen==='editar-silo' &&selSilo&&<EditarSiloScreen silo={selSilo} autoDelete={autoDelete} nav={nav}
+            onSave={updated=>{setSilos(prev=>prev.map(s=>s.id===updated.id?updated:s));toast.add('ok','Cambios guardados',`${updated.name} fue actualizado.`);}}
+            onDelete={id=>{const nm=silos.find(s=>s.id===id)?.name||'Silo';setSilos(prev=>prev.filter(s=>s.id!==id));toast.add('info','Silo eliminado',`${nm} fue eliminado.`);}}/>}
+          {screen==='dashboard'    &&<DashboardScreen silos={silos} alerts={alerts} nav={nav}
+                                        producerName={t.producerName} showBanner={t.showBanner}
+                                        farmName={profileData.farm?.name||'Mi establecimiento'} connState={t.connState}/>}
+          {screen==='silo'         &&selSilo&&<SiloScreen silo={selSilo} alerts={alerts} nav={nav}
+                                        lote={lotes.find(l=>l.siloId===selSilo.id&&l.status==='monitoring')}
+                                        onIniciarLote={s=>setIniciarLoteSilo(s)}
+                                        deviceState={selSilo.id===2?t.deviceState:'ok'}
+                                        onFinalizarLote={l=>setFinalizarLoteTarget(l)}/>}
+          {screen==='alerts'       &&<AlertsScreen alerts={alerts} nav={nav}/>}
+          {screen==='alert-detail' &&selAlt &&<AlertDetailScreen alert={selAlt} nav={nav} onResolve={resolve} offline={t.connState!=='online'}/>}
+          {screen==='contacto-tecnico' &&selAlt &&<ContactoTecnicoScreen alert={selAlt} nav={nav} connState={t.connState} availability={t.techAvailability}/>}
+          {screen==='historial'  &&selSilo&&<HistorialScreen silo={selSilo} nav={nav} initialVariable={initialVar}/>}
+          {screen==='calidad'&&<PasaporteListScreen nav={nav} lotes={lotes} silos={silos}/>}
+          {screen==='pasaporte'&&selLote&&<PasaporteDetailScreen lote={selLote} silos={silos} nav={nav}/>}
+          {screen==='perfil'&&<ProfileScreen profile={profileData} siloCount={SILOS.length} variant={t.profileVariant} nav={nav}/>}
+          {screen==='edit-profile'&&<EditProfileScreen profile={profileData} onSave={setProfileData} nav={nav}/>}
+          {screen==='notifications'&&<NotificationsScreen settings={profileData.notifications} onChange={(k,v)=>setProfileData(p=>({...p,notifications:{...p.notifications,[k]:v}}))} nav={nav}/>}
+          {screen==='devices'&&<DevicesScreen devices={profileData.devices} nav={nav}/>}
+          {screen==='umbrales'&&<UmbralesScreen silos={silos} preselectedSilo={umbralesSilo} onBack={()=>nav(umbralesSilo?'silo':'perfil',umbralesSilo?{silo:umbralesSilo}:{})}/>}
+        </div>
+        {showNav&&<NavBar active={navTab} tabs={navTabs} onChange={id=>{setNavTab(id);nav(id==='alertas'?'alerts':id==='calidad'?'calidad':id);}}/>}
+      </PhoneFrame>
+      <ToastOverlay toasts={toast.toasts} onDismiss={toast.dismiss}/>
+      <IniciarLoteSheet open={!!iniciarLoteSilo} onClose={()=>setIniciarLoteSilo(null)} silo={iniciarLoteSilo} onConfirm={iniciarLote}/>
+      <FinalizarLoteConfirm open={!!finalizarLoteTarget} onClose={()=>setFinalizarLoteTarget(null)} lote={finalizarLoteTarget} onConfirm={finalizarLote}/>
+
+      <TweaksPanel>
+        <TweakSection label="Productor"/>
+        <TweakText   label="Nombre"        value={t.producerName} onChange={v=>setTweak('producerName',v)}/>
+        <TweakSection label="Pantalla inicial"/>
+        <TweakRadio  label="Inicio en"     value={t.startScreen}
+                     options={['dashboard','alertas']}
+                     onChange={v=>{setTweak('startScreen',v);nav(v==='alertas'?'alerts':'dashboard');}}/>
+        <TweakSection label="Dashboard"/>
+        <TweakToggle label="Mostrar banner" value={t.showBanner} onChange={v=>setTweak('showBanner',v)}/>
+        <TweakSection label="Perfil"/>
+        <TweakRadio label="Mi perfil" value={t.profileVariant} options={[{value:'propuesta',label:'Propuesta'},{value:'actual',label:'Actual'}]} onChange={v=>{setTweak('profileVariant',v);nav('perfil');}}/>
+        <TweakSection label="Pasaporte de calidad"/>
+        <TweakRadio label="Estado del lote (demo)" value={t.loteEstadoDemo}
+          options={['monitoring','finalized']}
+          onChange={v=>{
+            setTweak('loteEstadoDemo',v);
+            const base=lotes.find(l=>l.status===v)||lotes[0];
+            nav('pasaporte',{lote:base});
+          }}/>
+        <TweakSection label="Estados especiales"/>
+        <TweakRadio label="Conexión del celular" value={t.connState}
+          options={['online','offline-recent','offline-prolonged']}
+          onChange={v=>{
+            setTweak('connState',v);
+            if(v==='online'&&t.connState!=='online') toast.add('ok','Conexión restablecida','Los datos se actualizaron correctamente.');
+            nav('dashboard');
+          }}/>
+        <TweakRadio label="Lanza de Silo Sur" value={t.deviceState}
+          options={['ok','device-offline-recent','device-offline-prolonged']}
+          onChange={v=>{setTweak('deviceState',v);nav('silo',{silo:silos.find(s=>s.id===2)||silos[0]});}}/>
+        <TweakSection label="Contacto con técnico"/>
+        <TweakRadio label="Disponibilidad" value={t.techAvailability}
+          options={['auto','en-horario','fuera-de-horario']}
+          onChange={v=>{setTweak('techAvailability',v);nav('contacto-tecnico',{alert:selAlt||ALERTS_INIT[0]});}}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

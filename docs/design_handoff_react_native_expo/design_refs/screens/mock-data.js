@@ -1,0 +1,43 @@
+/* SiloGuard — mock data for App Screens prototype */
+window.SG = {
+  silos: [
+    { id:1, name:'Silo Norte', grain:'Soja',    tons:180, acopio:'15 mar 2024', status:'ok',       temp:22.1, hum:13.8, co2:420,  trend:[21.0,21.4,21.8,22.0,22.1,22.3,22.1], storage:'Silo fijo', lastUpdate:'Hace 5 min' },
+    { id:2, name:'Silo Sur',   grain:'Maíz',    tons:240, acopio:'20 ene 2024', status:'critical', temp:42.3, hum:15.1, co2:890,  trend:[28.1,31.2,34.5,37.8,39.4,41.1,42.3], storage:'Silo fijo', lastUpdate:'Hace 12 min' },
+    { id:3, name:'Silo Este',  grain:'Trigo',   tons:95,  acopio:'08 feb 2024', status:'warn',     temp:28.4, hum:18.2, co2:550,  trend:[25.0,25.8,26.4,27.0,27.8,28.1,28.4], storage:'Silobolsa', lastUpdate:'Hace 8 min' },
+    { id:4, name:'Silo Oeste', grain:'Soja',    tons:210, acopio:'01 abr 2024', status:'ok',       temp:21.8, hum:13.2, co2:390,  trend:[22.1,21.9,21.8,21.6,21.7,21.9,21.8], storage:'Silo fijo', lastUpdate:'Hace 3 min' },
+    { id:5, name:'Silo 5',     grain:'Girasol', tons:120, acopio:'10 mar 2024', status:'ok',       temp:23.0, hum:12.9, co2:410,  trend:[22.8,23.0,23.1,22.9,23.0,23.2,23.0], storage:'Silo fijo', lastUpdate:'Hace 15 min' },
+    { id:6, name:'Silo 6',     grain:'Maíz',    tons:155, acopio:'22 feb 2024', status:'warn',     temp:30.1, hum:16.8, co2:620,  trend:[26.0,27.1,28.0,29.0,29.5,30.0,30.1], storage:'Silobolsa', lastUpdate:'Hace 20 min' },
+  ],
+  alerts: [
+    { id:1, siloId:2, silo:'Silo Sur',   variant:'critical', title:'Temperatura crítica',
+      time:'Hace 2 h', estimate:'Crítico en 24 h', action:'Inspección presencial',
+      desc:'La temperatura superó el umbral crítico de 35 °C. Riesgo de desarrollo de hongos y pérdida de calidad del grano.',
+      sensor:'temp', value:'42.3', unit:'°C', threshold:'35°C', status:'active' },
+    { id:2, siloId:3, silo:'Silo Este',  variant:'warning', title:'Humedad elevada',
+      time:'Hace 5 h', estimate:'Revisar en 48 h', action:'Encender aireación',
+      desc:'La humedad relativa superó el umbral recomendado. Posible condensación y riesgo de hongos a corto plazo.',
+      sensor:'humidity', value:'18.2', unit:'%', threshold:'14%', status:'active' },
+    { id:3, siloId:6, silo:'Silo 6',     variant:'warning', title:'CO₂ elevado',
+      time:'Ayer 14:30', estimate:null, action:'Ventilación recomendada',
+      desc:'Niveles de CO₂ levemente por encima del umbral. Monitorear en las próximas horas.',
+      sensor:'co2', value:'620', unit:'ppm', threshold:'600 ppm', status:'active' },
+    { id:4, siloId:1, silo:'Silo Norte', variant:'resolved', title:'Temperatura elevada',
+      time:'Hace 3 días', action:'Encender aireación',
+      desc:'Temperatura levemente elevada. Resuelta mediante aireación.',
+      sensor:'temp', value:'31.0', unit:'°C', status:'resolved', resolutionNote:'Activé la aireación por 3 horas.' },
+    { id:5, siloId:4, silo:'Silo Oeste', variant:'resolved', title:'Humedad elevada',
+      time:'Hace 6 días', action:'Encender aireación',
+      desc:'Humedad levemente elevada. Resuelta por ventilación.',
+      sensor:'humidity', value:'15.8', unit:'%', status:'resolved', resolutionNote:'Aireé el silo. Bajó a 13.2 %.' },
+  ],
+  profile: {
+    name:'Lucas Escobar', email:'lucas.escobar@gmail.com', phone:'+54 9 341 555-0123',
+    farm:{ name:'Estancia La Esperanza', location:'Pergamino, Buenos Aires', hectares:320 },
+    devices:[
+      { id:1, name:'Lanza #1', silo:'Silo Norte', status:'online',  battery:87, lastSync:'Hace 5 min' },
+      { id:2, name:'Lanza #2', silo:'Silo Sur',   status:'online',  battery:64, lastSync:'Hace 12 min' },
+      { id:3, name:'Lanza #3', silo:'Silo Este',  status:'offline', battery:12, lastSync:'Hace 3 días' },
+    ],
+    notifications:{ push:true, critical:true, warning:true, weeklySummary:true, nightSilence:false, nightStart:'22:00', nightEnd:'07:00' },
+  },
+};

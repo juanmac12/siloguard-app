@@ -1,0 +1,33 @@
+/* SiloGuard — Color tokens
+   Source of truth: Figma › Foundations › Color Tokens (node 135:25).
+   SiloGuard is a dark-first product. The canvas is near-black, surfaces are
+   layered greys, and a single agronomic green carries brand + "all healthy".
+   Amber / Danger / Info are reserved strictly for grain-health status. */
+:root {
+  /* ---- Brand / primary ---------------------------------------------- */
+  --green: #22C55E;          /* primary · brand · "estado OK" (verde)        */
+  --green-600: #16A34A;      /* primary pressed / darker fill                */
+  --green-tint: rgba(34, 197, 94, 0.12); /* badge & highlight fills          */
+  --green-line: rgba(34, 197, 94, 0.30); /* dashed guides, focus rings       */
+
+  /* ---- Status (grain health) ---------------------------------------- */
+  --amber: #F59E0B;          /* advertencia · "atención" (amarillo)          */
+  --amber-tint: rgba(245, 158, 11, 0.12);
+  --danger: #EF4444;         /* crítica · "riesgo" (rojo)                    */
+  --danger-tint: rgba(239, 68, 68, 0.12);
+  --info: #3B82F6;           /* informativo · hints, tips                    */
+  --info-tint: rgba(59, 130, 246, 0.12);
+
+  /* ---- Neutrals / surfaces (dark) ----------------------------------- */
+  --bg: #0A0A0A;             /* app canvas                                    */
+  --surface: #111111;        /* cards, headers, nav bars                      */
+  --surface-2: #1A1A1A;      /* inputs, raised rows, inset fields             */
+  --surface-3: #262626;      /* hover surface / pressed rows                  */
+  --spec-bg: #0F0F0F;        /* specimen / documentation card backdrop        */
+  --border: #2A2A2A;         /* hairline dividers & control borders           */
+
+  /* ---- Text --------------------------------------------------------- */
+  --text: #F5F5F5;           /* primary text on dark                          */
+  --text-muted: #6B7280;     /* secondary text, labels, placeholders          */
+  --text-on-green: #0A0A0A;  /* text/icon sitting on a green fill             */
+}
