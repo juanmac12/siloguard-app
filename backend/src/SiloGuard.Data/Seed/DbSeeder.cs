@@ -15,6 +15,36 @@ public static class DbSeeder
         // Las tablas agregadas despues del seed original se siembran aparte y de forma
         // idempotente, para que una base ya poblada tambien las reciba al actualizar.
         await SeedExtrasAsync(db);
+
+        // Los datos demo envejecen: si el seed corrio hace dias, los rangos 24h/48h/7d
+        // del historial quedan vacios y el dashboard muestra "ultima lectura hace N dias".
+        // Este re-anclado corre en cada arranque (solo Development llama al seeder) y
+        // desplaza los timestamps para que la lectura mas reciente sea "ahora".
+        await RefreshDemoTimestampsAsync(db);
+    }
+
+    private static async Task RefreshDemoTimestampsAsync(SiloGuardDbContext db)
+    {
+        var now = DateTime.UtcNow;
+        var maxTs = await db.SensorReadings.MaxAsync(r => (DateTime?)r.Timestamp);
+        if (maxTs is null) return;
+
+        var drift = now - maxTs.Value;
+        if (drift < TimeSpan.FromHours(2)) return; // datos suficientemente frescos
+
+        // ExecuteUpdate corre como UPDATE directo en la DB (sin pasar por el change
+        // tracker), asi que no dispara auditoria ni pisa CreatedAt/UpdatedAt de negocio.
+        await db.SensorReadings
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Timestamp, r => r.Timestamp + drift));
+
+        await db.Silos
+            .Where(s => s.LastReadingAt != null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.LastReadingAt, x => x.LastReadingAt + drift));
+
+        await db.Alerts
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.CreatedAt, a => a.CreatedAt + drift)
+                .SetProperty(a => a.ResolvedAt, a => a.ResolvedAt + drift));
     }
 
     private static async Task SeedCoreAsync(SiloGuardDbContext db)
