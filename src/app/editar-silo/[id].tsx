@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable, Modal, Alert,
 } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ThemeColors, Radius } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -12,6 +13,23 @@ import { Icon } from "../../components";
 
 const GRAIN_TYPES = ["Soja", "Maíz", "Trigo", "Girasol", "Sorgo", "Cebada", "Otro"];
 const STORAGE_TYPES = ["Silo fijo", "Silobolsa"];
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+// El campo "acopio" es texto libre en el backend (mismo formato que usa el seeder,
+// ej. "15 mar 2024"), así que el picker nativo solo cambia CÓMO se elige la fecha,
+// no lo que se manda a la API.
+function formatAcopio(d: Date): string {
+  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function parseAcopio(s: string): Date {
+  const m = /^(\d{1,2})\s+([a-zñ]{3})\s+(\d{4})$/i.exec(s.trim());
+  if (m) {
+    const monthIdx = MESES.indexOf(m[2].toLowerCase());
+    if (monthIdx >= 0) return new Date(Number(m[3]), monthIdx, Number(m[1]));
+  }
+  return new Date();
+}
 
 interface FormState {
   name: string;
@@ -52,6 +70,23 @@ export default function EditarSiloScreen() {
   const [deleteModal, setDeleteModal] = useState(del === "1");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Picker nativo de fecha: Android abre el diálogo del sistema y se cierra solo;
+  // iOS muestra la rueda embebida en un modal con botón "Listo" (no se auto-cierra).
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerDate, setPickerDate] = useState(() => parseAcopio(silo?.acopio ?? ""));
+
+  const onChangeDate = (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+      if (event.type === "set" && selected) {
+        setPickerDate(selected);
+        set("acopio")(formatAcopio(selected));
+      }
+      return;
+    }
+    if (selected) setPickerDate(selected);
+  };
 
   const set = (key: keyof FormState) => (val: string) => {
     setForm((f) => ({ ...f, [key]: val }));
@@ -204,18 +239,66 @@ export default function EditarSiloScreen() {
             {errors.tons ? <Text style={[styles.errorText, { color: colors.statusCritical }]}>{errors.tons}</Text> : null}
           </View>
 
-          {/* Fecha de acopio */}
+          {/* Fecha de acopio — selector nativo, no texto libre */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: errors.acopio ? colors.statusCritical : colors.textSecondary }]}>Fecha de acopio</Text>
-            <TextInput
-              value={form.acopio}
-              onChangeText={set("acopio")}
-              placeholder="Ej: 15 mar 2024"
-              placeholderTextColor={colors.textSecondary}
-              style={[styles.input, { backgroundColor: colors.surfaceInput, borderColor: errors.acopio ? colors.statusCritical : colors.borderDefault, color: colors.textPrimary }]}
-            />
+            <Pressable
+              onPress={() => {
+                setPickerDate(parseAcopio(form.acopio));
+                setShowDatePicker(true);
+              }}
+              style={[styles.input, styles.dateInput, { backgroundColor: colors.surfaceInput, borderColor: errors.acopio ? colors.statusCritical : colors.borderDefault }]}
+            >
+              <Text style={{ color: form.acopio ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
+                {form.acopio || "Elegí una fecha"}
+              </Text>
+              <Icon name="clock" size={17} color={colors.textSecondary} />
+            </Pressable>
             {errors.acopio ? <Text style={[styles.errorText, { color: colors.statusCritical }]}>{errors.acopio}</Text> : null}
+
+            {/* Android: diálogo nativo del sistema, se cierra solo al elegir */}
+            {showDatePicker && Platform.OS === "android" && (
+              <DateTimePicker
+                value={pickerDate}
+                mode="date"
+                display="default"
+                maximumDate={new Date()}
+                onChange={onChangeDate}
+              />
+            )}
           </View>
+
+          {/* iOS: rueda embebida en un modal propio, con confirmación explícita */}
+          {Platform.OS === "ios" && (
+            <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
+              <Pressable style={styles.overlay} onPress={() => setShowDatePicker(false)} />
+              <View style={[styles.datePickerSheet, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
+                <View style={styles.datePickerHeader}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 15 }}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "600" }}>Fecha de acopio</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      set("acopio")(formatAcopio(pickerDate));
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={{ color: colors.actionPrimary, fontSize: 15, fontWeight: "700" }}>Listo</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={new Date()}
+                  onChange={onChangeDate}
+                  themeVariant="dark"
+                  style={{ alignSelf: "center" }}
+                />
+              </View>
+            </Modal>
+          )}
 
           {/* Guardar */}
           <TouchableOpacity onPress={save} disabled={saving} style={[styles.primaryBtn, { backgroundColor: saving ? colors.surfaceInput : colors.actionPrimary }]}>
@@ -275,7 +358,18 @@ const makeStyles = (c: ThemeColors) =>
     fieldGroup: { marginBottom: 16 },
     label: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
     input: { borderWidth: 1, borderRadius: Radius.md, padding: 12, fontSize: 15 },
+    dateInput: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     errorText: { fontSize: 12, marginTop: 5, fontWeight: "500" },
+
+    datePickerSheet: {
+      position: "absolute", left: 0, right: 0, bottom: 0,
+      borderTopWidth: 1, borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg,
+      paddingBottom: 24,
+    },
+    datePickerHeader: {
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      paddingHorizontal: 16, paddingVertical: 14,
+    },
 
     chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
     selectChip: { borderWidth: 1, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 6 },
