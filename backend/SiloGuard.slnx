@@ -4,4 +4,7 @@
     <Project Path="src/SiloGuard.Business/SiloGuard.Business.csproj" />
     <Project Path="src/SiloGuard.Data/SiloGuard.Data.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SiloGuard.Tests/SiloGuard.Tests.csproj" />
+  </Folder>
 </Solution>

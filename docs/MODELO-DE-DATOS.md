@@ -1,5 +1,14 @@
 # SiloGuard — Modelo de Datos (plan de implementación)
 
+> **⚡ Estado (2026-07-15):** del plan de este documento ya se **implementó** en el backend:
+> `Umbrales` (configuraciones_umbral), `Destinatarios` + `LoteDestinatarios` (la N-N de
+> compartir pasaporte, tomada de §12 extensiones), `Tecnicos`, `ConsultasSoporte` y
+> `PreferenciasNotificacion` — migración `AddUmbralesPasaporteCompartidoYSoporte`.
+> La base quedó en **14 tablas** (13 de dominio + auditoría) con **2 relaciones N-N**.
+> No se implementó el refactor de `establecimientos`/`tipos_grano`/`lanzas` (decisión de
+> alcance por deadline: migración con transformación de datos, riesgo alto).
+> Ver `docs/CHECKLIST-DEFENSA.md` para la demo de cada pieza.
+
 > Documento de **diseño** del modelo de datos del backend, derivado del alcance que el equipo
 > va a construir y presentar: **`SiloGuard_definicion_producto_implementado.md`** (26 pantallas
 > + Dispositivos). Reemplaza a versiones anteriores basadas en la v2 del producto.

@@ -26,10 +26,16 @@ backend/
 
 ## Modelo de datos
 
-7 tablas: `Users`, `Roles`, `UserRoles` (N-N real entre Users y Roles), `Silos` (1-N desde
-Users), `SensorReadings` (1-N desde Silos, historial paginable), `Alerts` (1-N desde Silos),
-`AuditLogs` (poblada automáticamente desde `SiloGuardDbContext.SaveChangesAsync` cada vez
-que se crea/modifica/borra un `Silo` o `Alert`).
+**14 tablas**: `Users`, `Roles`, `UserRoles` (N-N Users↔Roles), `Silos` (1-N desde Users),
+`SensorReadings` (1-N desde Silos, historial paginable), `Alerts` (1-N desde Silos),
+`Lotes` (Pasaporte de Calidad, 1-N desde Silos), `Umbrales` (detalle 1-N de Silos, con
+check `Warn < Crit` en DB), `Destinatarios` + `LoteDestinatarios` (**2ª N-N**, PK compuesta:
+con quién se compartió cada pasaporte), `Tecnicos` + `ConsultasSoporte` (contacto con
+técnico desde una alerta), `PreferenciasNotificaciones` (1-1 con Users) y `AuditLogs`
+(poblada automáticamente desde `SiloGuardDbContext.SaveChangesAsync` cada vez que se
+crea/modifica/borra un `Silo`, `Alert`, `Lote`, `Umbral` o `LoteDestinatario`).
+
+Tests: `dotnet test` (proyecto `tests/SiloGuard.Tests`, xUnit — seguridad y validators).
 
 Las contraseñas se guardan con BCrypt (`Users.PasswordHash`, formato `$2a$...` — el salt
 va embebido en el propio hash).
