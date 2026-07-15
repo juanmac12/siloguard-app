@@ -1,10 +1,14 @@
 {
-  "enabledPlugins": {
-    "expo@claude-plugins-official": true
-  },
   "permissions": {
     "allow": [
-      "Bash(dotnet test *)"
+      "Bash(dotnet test *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'docs: corregir referencias residuales al modelo anterior en pruebas y diagnóstico *)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
     ]
+  },
+  "enabledPlugins": {
+    "expo@claude-plugins-official": true
   }
 }
