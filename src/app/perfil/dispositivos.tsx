@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { Spacing, FontSize, ThemeColors, Radius, FontWeight } from "../../constants/Theme";
+import { Spacing, FontSize, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { formatRelativeTime } from "../../utils/relativeTime";
@@ -103,23 +103,23 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 4, paddingTop: 56, paddingBottom: 10, paddingRight: Spacing.md, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: FontSize.bodyLg, fontWeight: "600" },
+  headerTitle: { fontSize: FontSize.bodyLg, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
   content: { padding: Spacing.md, gap: 14, paddingBottom: Spacing.xl },
   summaryRow: { flexDirection: "row", gap: 8 },
   summaryChip: { flex: 1, borderWidth: 1, borderRadius: Radius.md, paddingVertical: 10, paddingHorizontal: 12, alignItems: "center" },
-  summaryValue: { fontSize: 22, fontWeight: "700" },
-  summaryLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginTop: 4 },
-  sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", marginBottom: -6 },
+  summaryValue: { fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold) },
+  summaryLabel: { fontSize: 10, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold), letterSpacing: 0.5, textTransform: "uppercase", marginTop: 4 },
+  sectionLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.6, textTransform: "uppercase", marginBottom: -6 },
   card: { borderRadius: Radius.lg, borderWidth: 1, paddingHorizontal: 14, overflow: "hidden" },
   dcard: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 },
   deviceIcon: { width: 44, height: 44, borderRadius: Radius.md, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   deviceNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  deviceName: { fontSize: FontSize.bodyMd + 1, fontWeight: FontWeight.semibold as any },
+  deviceName: { fontSize: FontSize.bodyMd + 1, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  deviceMeta: { fontSize: FontSize.bodySm, marginTop: 2 },
+  deviceMeta: { fontSize: FontSize.bodySm, marginTop: 2, fontFamily: fontFamilyForWeight(FontWeight.regular) },
   batteryCol: { alignItems: "flex-end", gap: 2 },
-  batteryPct: { fontSize: FontSize.bodySm + 1, fontWeight: "700" },
-  batteryLabel: { fontSize: 10 },
+  batteryPct: { fontSize: FontSize.bodySm + 1, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold) },
+  batteryLabel: { fontSize: 10, fontFamily: fontFamilyForWeight(FontWeight.regular) },
   addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 48, borderRadius: Radius.md, borderWidth: 1 },
-  addBtnText: { fontSize: FontSize.bodyMd, fontWeight: FontWeight.semibold as any },
+  addBtnText: { fontSize: FontSize.bodyMd, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
 });

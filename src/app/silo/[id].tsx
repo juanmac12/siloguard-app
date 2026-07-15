@@ -212,7 +212,7 @@ export default function SiloScreen() {
             <View style={[styles.chartCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
                 <Text style={[styles.chartValue, { color: colors.textPrimary }]}>{silo.temp} °C</Text>
-                <Text style={{ fontSize: 12, color: tc, fontWeight: "500" }}>
+                <Text style={{ fontSize: 12, color: tc, fontWeight: FontWeight.medium, fontFamily: fontFamilyForWeight(FontWeight.medium) }}>
                   {silo.status === "critical" ? "↑ Crítico" : silo.status === "warn" ? "↑ Elevado" : "→ Estable"}
                 </Text>
               </View>

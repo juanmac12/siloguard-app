@@ -4,7 +4,7 @@ import {
   StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ThemeColors, Radius } from "../constants/Theme";
+import { ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../constants/Theme";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAppData } from "../contexts/AppDataContext";
 import { useConnState } from "../hooks/useConnState";
@@ -339,14 +339,14 @@ const makeStyles = (c: ThemeColors) =>
       paddingTop: 56, paddingBottom: 10, paddingHorizontal: 8, borderBottomWidth: 1,
     },
     backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-    headerTitle: { fontSize: 17, fontWeight: "600", color: c.textPrimary },
+    headerTitle: { fontSize: 17, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold), color: c.textPrimary },
 
     dotsRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
     dot: { height: 8, borderRadius: 4 },
 
     scroll: { padding: 16, paddingBottom: 40 },
-    stepTitle: { fontSize: 22, fontWeight: "700", marginBottom: 6, letterSpacing: -0.3 },
-    stepSub: { fontSize: 14, lineHeight: 22, marginBottom: 20 },
+    stepTitle: { fontSize: 22, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), marginBottom: 6, letterSpacing: -0.3 },
+    stepSub: { fontSize: 14, lineHeight: 22, marginBottom: 20, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
     qrFrame: {
       height: 240, borderRadius: Radius.xl, borderWidth: 2,
@@ -359,33 +359,33 @@ const makeStyles = (c: ThemeColors) =>
     qrBR: { bottom: 16, right: 16, borderLeftWidth: 0, borderTopWidth: 0 },
     qrScanLine: { position: "absolute", left: 20, right: 20, height: 2, top: "50%", borderRadius: 1, opacity: 0.8 },
     checkCircle: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-    scanOkText: { fontSize: 15, fontWeight: "700" },
-    scanDevice: { fontSize: 12, marginTop: 4 },
+    scanOkText: { fontSize: 15, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold) },
+    scanDevice: { fontSize: 12, marginTop: 4, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
     wifiRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: Radius.md, borderWidth: 1 },
-    wifiName: { flex: 1, fontSize: 14 },
+    wifiName: { flex: 1, fontSize: 14, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
     primaryBtn: {
       flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
       borderRadius: Radius.md, paddingVertical: 14,
     },
-    primaryBtnText: { fontSize: 15, fontWeight: "700" },
+    primaryBtnText: { fontSize: 15, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold) },
 
     infoBox: {
       flexDirection: "row", alignItems: "flex-start", gap: 10,
       padding: 12, borderRadius: Radius.md, borderWidth: 1, marginTop: 12,
     },
-    infoText: { flex: 1, fontSize: 13, lineHeight: 20 },
+    infoText: { flex: 1, fontSize: 13, lineHeight: 20, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
     fieldGroup: { marginBottom: 16 },
-    label: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
-    input: { borderWidth: 1, borderRadius: Radius.md, padding: 12, fontSize: 15 },
-    errorText: { fontSize: 12, marginTop: 5, fontWeight: "500" },
+    label: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
+    input: { borderWidth: 1, borderRadius: Radius.md, padding: 12, fontSize: 15, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    errorText: { fontSize: 12, marginTop: 5, fontWeight: FontWeight.medium, fontFamily: fontFamilyForWeight(FontWeight.medium) },
 
     chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
     selectChip: { borderWidth: 1, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 6 },
-    selectChipText: { fontSize: 13, fontWeight: "500" },
+    selectChipText: { fontSize: 13, fontWeight: FontWeight.medium, fontFamily: fontFamilyForWeight(FontWeight.medium) },
 
     storageChip: { flex: 1, borderWidth: 1, borderRadius: Radius.md, paddingVertical: 12, alignItems: "center" },
-    storageChipText: { fontSize: 14, fontWeight: "600" },
+    storageChipText: { fontSize: 14, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
   });
