@@ -34,6 +34,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISensorReadingRepository, SensorReadingRepository>();
         services.AddScoped<IAlertaRepository, AlertaRepository>();
         services.AddScoped<ILoteRepository, LoteRepository>();
+        services.AddScoped<IUmbralRepository, UmbralRepository>();
+        services.AddScoped<IDestinatarioRepository, DestinatarioRepository>();
+        services.AddScoped<ISoporteRepository, SoporteRepository>();
+        services.AddScoped<IPreferenciasRepository, PreferenciasRepository>();
 
         return services;
     }
@@ -50,6 +54,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILecturaService, LecturaService>();
         services.AddScoped<IAlertaService, AlertaService>();
         services.AddScoped<ILoteService, LoteService>();
+        services.AddScoped<IUmbralService, UmbralService>();
+        services.AddScoped<ISoporteService, SoporteService>();
+        services.AddScoped<IPreferenciasService, PreferenciasService>();
         services.AddScoped<IUsuarioAdminService, UsuarioAdminService>();
 
         services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();

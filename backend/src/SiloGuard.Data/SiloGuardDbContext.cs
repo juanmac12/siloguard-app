@@ -22,6 +22,12 @@ public class SiloGuardDbContext : DbContext
     public DbSet<SensorReading> SensorReadings => Set<SensorReading>();
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<Lote> Lotes => Set<Lote>();
+    public DbSet<Umbral> Umbrales => Set<Umbral>();
+    public DbSet<Destinatario> Destinatarios => Set<Destinatario>();
+    public DbSet<LoteDestinatario> LoteDestinatarios => Set<LoteDestinatario>();
+    public DbSet<Tecnico> Tecnicos => Set<Tecnico>();
+    public DbSet<ConsultaSoporte> ConsultasSoporte => Set<ConsultaSoporte>();
+    public DbSet<PreferenciasNotificacion> PreferenciasNotificaciones => Set<PreferenciasNotificacion>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -39,7 +45,7 @@ public class SiloGuardDbContext : DbContext
         {
             StampTimestamps(entry, now);
 
-            if (entry.Entity is Silo or Alert or Lote)
+            if (entry.Entity is Silo or Alert or Lote or Umbral or LoteDestinatario)
             {
                 var action = entry.State switch
                 {
@@ -86,6 +92,12 @@ public class SiloGuardDbContext : DbContext
             case Lote lote:
                 if (entry.State == EntityState.Added) lote.CreatedAt = now;
                 if (entry.State is EntityState.Added or EntityState.Modified) lote.UpdatedAt = now;
+                break;
+            case Umbral umbral:
+                if (entry.State is EntityState.Added or EntityState.Modified) umbral.UpdatedAt = now;
+                break;
+            case PreferenciasNotificacion prefs:
+                if (entry.State is EntityState.Added or EntityState.Modified) prefs.UpdatedAt = now;
                 break;
         }
     }

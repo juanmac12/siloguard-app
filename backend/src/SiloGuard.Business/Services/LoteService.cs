@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using SiloGuard.Business.Dtos.Lotes;
 using SiloGuard.Business.Exceptions;
 using SiloGuard.Data.Abstractions;
 using SiloGuard.Data.Entities;
@@ -11,6 +12,7 @@ public class LoteService : ILoteService
     private readonly ISiloRepository _silos;
     private readonly ISensorReadingRepository _readings;
     private readonly IAlertaRepository _alertas;
+    private readonly IDestinatarioRepository _destinatarios;
     private readonly IUnitOfWork _uow;
 
     public LoteService(
@@ -18,12 +20,14 @@ public class LoteService : ILoteService
         ISiloRepository silos,
         ISensorReadingRepository readings,
         IAlertaRepository alertas,
+        IDestinatarioRepository destinatarios,
         IUnitOfWork uow)
     {
         _lotes = lotes;
         _silos = silos;
         _readings = readings;
         _alertas = alertas;
+        _destinatarios = destinatarios;
         _uow = uow;
     }
 
@@ -105,6 +109,59 @@ public class LoteService : ILoteService
         }
 
         return lote;
+    }
+
+    public Task<List<Destinatario>> ListDestinatariosCatalogoAsync(CancellationToken ct = default) =>
+        _destinatarios.ListAsync(ct);
+
+    public async Task<List<LoteDestinatario>> ListDestinatariosDeLoteAsync(int userId, int loteId, CancellationToken ct = default)
+    {
+        var lote = await GetOwnedAsync(userId, loteId, ct);
+        return await _destinatarios.ListSharesByLoteAsync(lote.Id, ct);
+    }
+
+    public async Task<List<LoteDestinatario>> CompartirAsync(int userId, int loteId, CompartirLoteRequest request, CancellationToken ct = default)
+    {
+        var lote = await GetOwnedAsync(userId, loteId, ct);
+
+        var destinatarios = await _destinatarios.GetByIdsAsync(request.DestinatarioIds, ct);
+        if (destinatarios.Count != request.DestinatarioIds.Distinct().Count())
+            throw new NotFoundException("Alguno de los destinatarios no existe.");
+
+        // Alta N-N transaccional: se insertan todas las filas de LoteDestinatarios juntas
+        // (idempotente: los destinatarios que ya tenian el pasaporte no se duplican).
+        var existentes = await _destinatarios.ListSharesByLoteAsync(lote.Id, ct);
+        var yaCompartidos = existentes.Select(e => e.DestinatarioId).ToHashSet();
+        var ahora = DateTime.UtcNow;
+
+        var nuevos = destinatarios
+            .Where(d => !yaCompartidos.Contains(d.Id))
+            .Select(d => new LoteDestinatario
+            {
+                LoteId = lote.Id,
+                DestinatarioId = d.Id,
+                Destinatario = d,
+                CompartidoAt = ahora,
+            })
+            .ToList();
+
+        if (nuevos.Count > 0)
+        {
+            await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                await _destinatarios.AddSharesAsync(nuevos, ct);
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitAsync(ct);
+            }
+            catch
+            {
+                await _uow.RollbackAsync(ct);
+                throw;
+            }
+        }
+
+        return await _destinatarios.ListSharesByLoteAsync(lote.Id, ct);
     }
 
     private async Task<Lote> GetOwnedAsync(int userId, int loteId, CancellationToken ct)
