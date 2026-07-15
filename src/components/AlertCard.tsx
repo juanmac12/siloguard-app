@@ -5,7 +5,7 @@
  */
 import React, { useMemo } from 'react';
 import { Pressable, View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Radius, Spacing, FontWeight, ThemeColors } from '../constants/Theme';
+import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icon, IconName } from './Icon';
 
@@ -146,24 +146,29 @@ const makeStyles = (c: ThemeColors) =>
     pillText: {
       fontSize: 10,
       fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
       letterSpacing: 0.4,
     },
     time: {
       color: c.textMuted,
       fontSize: 12,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
     },
     title: {
       color: c.textPrimary,
       fontSize: 18,
       fontWeight: FontWeight.semibold,
+      fontFamily: fontFamilyForWeight(FontWeight.semibold),
     },
     silo: {
       color: c.textMuted,
       fontSize: 12,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
     },
     description: {
       color: c.textMuted,
       fontSize: 14,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
       lineHeight: 22,
     },
   });

@@ -1,73 +1,127 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { Colors, Spacing, FontSize } from "../constants/Theme";
+import { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useAppData } from "../contexts/AppDataContext";
+import { useTheme } from "../contexts/ThemeContext";
+import { AuthHeader, Button, Icon } from "../components";
+import { FontWeight, ThemeColors, fontFamilyForWeight } from "../constants/Theme";
+
+const RESEND_COOLDOWN = 60;
 
 export default function VerificarEmailScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const { profile, completeOnboarding } = useAppData();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const styles = makeStyles(colors);
+
+  const email = params.email || profile.email || "tu@email.com";
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
+  const [resentMsg, setResentMsg] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
+
+  const resend = () => {
+    if (cooldown > 0) return;
+    setCooldown(RESEND_COOLDOWN);
+    setResentMsg(true);
+    setTimeout(() => setResentMsg(false), 2500);
+  };
+
+  const continuar = () => {
+    router.replace("/permisos");
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header Fijo */}
-      <View style={styles.headerContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backArrow}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verificar email</Text>
+      <AuthHeader title="Verificá tu email" showBack={false} />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.iconCircle}>
+          <Icon name="mail" size={36} color={colors.actionPrimary} />
         </View>
-        <View style={styles.headerSeparator} />
-      </View>
-
-      <View style={styles.content}>
-        {/* Icono de Campana */}
-        <View style={styles.iconContainer}>
-          <View style={styles.bellIconPlaceholder}>
-            {/* Si agregas un paquete de iconos como expo/vector-icons usa un ícono de campana acá */}
-            <Text style={styles.bellIconEmoji}>🔔</Text>
-          </View>
-        </View>
-
-        <Text style={styles.heading}>Revisá tu correo</Text>
-
-        <Text style={styles.description}>
-          Te enviamos un enlace de verificación a{"\n"}
-          <Text style={styles.emailBold}>tu correo</Text>. Tocá el enlace para activar{"\n"}
-          tu cuenta.
+        <Text style={styles.title}>Verificá tu email</Text>
+        <Text style={styles.desc}>
+          Te enviamos un enlace de verificación a <Text style={styles.emailBold}>{email}</Text>. Revisá tu bandeja de entrada.
         </Text>
 
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => router.replace("/registro-exitoso")}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.primaryButtonText}>Ya verifiqué</Text>
-        </TouchableOpacity>
+        <View style={styles.resendWrap}>
+          <Button variant="secondary" fullWidth disabled={cooldown > 0} onPress={resend}>
+            {cooldown > 0 ? `Reenviar en ${cooldown}s` : "Reenviar email"}
+          </Button>
+        </View>
+        {resentMsg ? <Text style={styles.resentMsg}>Email reenviado correctamente ✓</Text> : null}
 
-        <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.6}>
-          <Text style={styles.secondaryButtonText}>Reenviar email</Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.spamHint}>¿No lo encontrás? Revisá tu carpeta de spam.</Text>
+
+        <View style={styles.linksRow}>
+          <Text style={styles.linkMuted} onPress={() => router.replace("/register")}>
+            Cambiar email
+          </Text>
+          <Text style={styles.linkUnderline} onPress={() => router.push("/contacto-tecnico")}>
+            ¿Problemas? Contactanos
+          </Text>
+        </View>
+
+        <View style={styles.continueWrap}>
+          <Button
+            variant="primary"
+            fullWidth
+            onPress={() => {
+              completeOnboarding();
+              continuar();
+            }}
+          >
+            Ya verifiqué mi email
+          </Button>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  headerContainer: { paddingTop: 60, backgroundColor: Colors.bg },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
-  backButton: { paddingRight: Spacing.md },
-  backArrow: { color: Colors.text, fontSize: 32, fontWeight: "400", lineHeight: 32, marginTop: -4 },
-  headerTitle: { color: Colors.text, fontSize: FontSize.headingLg, fontWeight: "700" },
-  headerSeparator: { height: 1, backgroundColor: Colors.border, width: "100%" },
-  content: { flex: 1, paddingHorizontal: Spacing.lg, justifyContent: "center", alignItems: "center", marginTop: -60 },
-  iconContainer: { marginBottom: Spacing.xl },
-  bellIconPlaceholder: { width: 80, height: 80, backgroundColor: "#1E293B", borderRadius: 20, justifyContent: "center", alignItems: "center" },
-  bellIconEmoji: { fontSize: 32 },
-  heading: { color: "#FFFFFF", fontSize: FontSize.headingXl, fontWeight: "700", marginBottom: Spacing.md },
-  description: { color: Colors.textMuted, fontSize: FontSize.bodyMd, textAlign: "center", lineHeight: 22, marginBottom: Spacing.xxl },
-  emailBold: { color: "#FFFFFF", fontWeight: "600" },
-  primaryButton: { backgroundColor: Colors.primary, borderRadius: 8, paddingVertical: 16, alignItems: "center", width: "100%", marginBottom: Spacing.lg },
-  primaryButtonText: { color: Colors.bg, fontSize: FontSize.bodyLg, fontWeight: "700" },
-  secondaryButton: { paddingVertical: Spacing.sm },
-  secondaryButtonText: { color: Colors.primary, fontSize: FontSize.bodyMd, fontWeight: "500" },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    scroll: { padding: 24, paddingTop: 32, alignItems: "center" },
+    iconCircle: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: c.greenTint,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
+      color: c.textPrimary,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    desc: {
+      maxWidth: 280,
+      fontSize: 14,
+      lineHeight: 22,
+      color: c.textSecondary,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
+      textAlign: "center",
+    },
+    emailBold: {
+      color: c.textPrimary,
+      fontWeight: FontWeight.semibold,
+      fontFamily: fontFamilyForWeight(FontWeight.semibold),
+    },
+    resendWrap: { width: "100%", marginTop: 28 },
+    resentMsg: { fontSize: 12, color: c.statusOk, marginTop: 12, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    spamHint: { fontSize: 12, lineHeight: 18, color: c.textSecondary, marginTop: 20, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    linksRow: { flexDirection: "row", gap: 20, marginTop: 16 },
+    linkMuted: { fontSize: 12, color: c.textLink, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    linkUnderline: { fontSize: 12, color: c.textSecondary, textDecorationLine: "underline", fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    continueWrap: { width: "100%", marginTop: 32 },
+  });

@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Colors, Spacing, FontWeight } from '../constants/Theme';
+import { Colors, Spacing, FontWeight, fontFamilyForWeight } from '../constants/Theme';
 import { Icon, IconName } from './Icon';
 
 export type TabKey = 'dashboard' | 'alertas' | 'pasaporte' | 'perfil';
@@ -104,6 +104,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: FontWeight.medium,
+    fontFamily: fontFamilyForWeight(FontWeight.medium),
   },
   badge: {
     position: 'absolute',
@@ -121,6 +122,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: FontWeight.bold,
+    fontFamily: fontFamilyForWeight(FontWeight.bold),
   },
 });
 

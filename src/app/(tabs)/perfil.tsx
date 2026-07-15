@@ -1,134 +1,61 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Linking,
-  Modal,
-  Pressable,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Linking } from "react-native";
 import { useRouter } from "expo-router";
-import { Spacing, FontSize, ThemeColors, Radius, FontWeight } from "../../constants/Theme";
+import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { Icon } from "../../components";
+import { BottomSheet, Button, Icon } from "../../components";
 import type { IconName } from "../../components";
 
-const DEVICES = [
-  { id: 1, status: "online" },
-  { id: 2, status: "online" },
-  { id: 3, status: "offline" },
-];
-
-function Avatar({ name, size = 52 }: { name: string; size?: number }) {
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function Avatar({ name, size = 72 }: { name: string; size?: number }) {
+  const { colors } = useTheme();
+  const initials = name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   return (
     <View
       style={{
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: "rgba(34,197,94,0.12)",
+        backgroundColor: colors.greenTint,
         borderWidth: 2,
-        borderColor: "#22C55E",
+        borderColor: colors.actionPrimary,
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <Text
-        style={{
-          fontSize: size * 0.35,
-          fontWeight: "700",
-          color: "#22C55E",
-          letterSpacing: -0.5,
-        }}
-      >
+      <Text style={{ fontSize: size * 0.35, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), color: colors.actionPrimary, letterSpacing: -0.5 }}>
         {initials}
       </Text>
     </View>
   );
 }
 
-function MRow({
-  icon,
-  label,
-  value,
-  onPress,
-  danger = false,
-  last = false,
-  colors,
-}: {
-  icon: IconName;
-  label: string;
-  value?: string;
-  onPress?: () => void;
-  danger?: boolean;
-  last?: boolean;
-  colors: ThemeColors;
-}) {
+function VerifiedBadge() {
+  const { colors } = useTheme();
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={onPress ? 0.6 : 1}
-      style={[
-        styles.mrow,
-        !last && { borderBottomWidth: 1, borderBottomColor: colors.borderDefault },
-      ]}
-    >
-      <Icon
-        name={icon}
-        size={20}
-        color={danger ? colors.statusCritical : colors.textSecondary}
-      />
-      <Text
-        style={[
-          styles.mrowLabel,
-          { color: danger ? colors.statusCritical : colors.textPrimary },
-        ]}
-      >
-        {label}
-      </Text>
-      {value ? (
-        <Text style={[styles.mrowValue, { color: colors.textSecondary }]}>{value}</Text>
-      ) : null}
-      {onPress && !danger ? (
-        <Icon name="chevron-right" size={18} color={colors.textSecondary} />
-      ) : null}
-    </TouchableOpacity>
+    <View style={[styles.verifiedBadge, { backgroundColor: colors.greenTint }]}>
+      <Icon name="check-circle" size={11} color={colors.actionPrimary} />
+      <Text style={[styles.verifiedText, { color: colors.actionPrimary }]}>Verificado</Text>
+    </View>
   );
 }
 
-function SCard({
-  label,
-  children,
-  colors,
-}: {
-  label?: string;
-  children: React.ReactNode;
-  colors: ThemeColors;
-}) {
+function MRow({ icon, label, value, onPress, danger = false, last = false, colors }: { icon: IconName; label: string; value?: string; onPress?: () => void; danger?: boolean; last?: boolean; colors: ThemeColors }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.mrow, !last && { borderBottomWidth: 1, borderBottomColor: colors.borderDefault }]}>
+      <Icon name={icon} size={20} color={danger ? colors.statusCritical : colors.textSecondary} />
+      <Text style={[styles.mrowLabel, { color: danger ? colors.statusCritical : colors.textPrimary }]}>{label}</Text>
+      {value ? <Text style={[styles.mrowValue, { color: colors.textSecondary }]}>{value}</Text> : null}
+      {onPress && !danger ? <Icon name="chevron-right" size={18} color={colors.textSecondary} /> : null}
+    </Pressable>
+  );
+}
+
+function SCard({ label, children, colors }: { label?: string; children: React.ReactNode; colors: ThemeColors }) {
   return (
     <View style={{ marginBottom: 14 }}>
-      {label ? (
-        <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>{label}</Text>
-      ) : null}
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault },
-        ]}
-      >
-        {children}
-      </View>
+      {label ? <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>{label}</Text> : null}
+      <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>{children}</View>
     </View>
   );
 }
@@ -137,11 +64,8 @@ export default function PerfilScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { profile, silos, logout } = useAppData();
-  const [logoutModal, setLogoutModal] = useState(false);
+  const [logoutSheet, setLogoutSheet] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const onlineCount = DEVICES.filter((d) => d.status === "online").length;
-  const totalDevices = DEVICES.length;
 
   const confirmLogout = async () => {
     setLoggingOut(true);
@@ -149,291 +73,112 @@ export default function PerfilScreen() {
       await logout();
     } finally {
       setLoggingOut(false);
-      setLogoutModal(false);
+      setLogoutSheet(false);
       router.replace("/login");
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={[styles.header, { backgroundColor: colors.bg }]}>
+      <View style={styles.header}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Mi Perfil</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* User row — compacto */}
-        <TouchableOpacity
-          style={styles.userRow}
-          onPress={() => router.push("/perfil/editar")}
-          activeOpacity={0.7}
-        >
-          <Avatar name={profile.name} size={52} />
-          <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: colors.textPrimary }]}>
-              {profile.name}
-            </Text>
-            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
-              {profile.email}
-            </Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Pressable style={styles.identityCol} onPress={() => router.push("/perfil/editar")}>
+          <Avatar name={profile.name} size={72} />
+          <Text style={[styles.userName, { color: colors.textPrimary }]}>{profile.name}</Text>
+          <View style={styles.emailRow}>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{profile.email}</Text>
+            <VerifiedBadge />
           </View>
-          <Text style={[styles.editLink, { color: colors.actionPrimary }]}>Editar</Text>
-          <Icon name="chevron-right" size={16} color={colors.actionPrimary} />
-        </TouchableOpacity>
+        </Pressable>
 
-        {/* Farm card */}
-        <View
-          style={[
-            styles.farmCard,
-            { backgroundColor: "rgba(34,197,94,0.08)", borderColor: "rgba(34,197,94,0.2)" },
-          ]}
-        >
+        <Pressable style={[styles.farmCard, { backgroundColor: colors.greenTint, borderColor: "rgba(34,197,94,0.2)" }]} onPress={() => router.push("/perfil/editar")}>
           <View style={styles.farmRow}>
             <Icon name="map-pin" size={16} color={colors.actionPrimary} />
-            <Text style={[styles.farmName, { color: colors.textPrimary }]}>
-              {profile.farmName}
-            </Text>
+            <Text style={[styles.farmName, { color: colors.textPrimary }]}>{profile.farmName}</Text>
           </View>
           <Text style={[styles.farmMeta, { color: colors.textSecondary }]}>
             {profile.farmLoc} · {silos.length} silos · {profile.farmHa} ha
           </Text>
-        </View>
+        </Pressable>
 
-        {/* Configuración */}
-        <SCard colors={colors}>
-          <MRow
-            icon="wifi"
-            label="Mis lanzas"
-            value={`${onlineCount}/${totalDevices} online`}
-            onPress={() => router.push("/perfil/lanzas")}
-            colors={colors}
-          />
-          <MRow
-            icon="bell"
-            label="Notificaciones"
-            onPress={() => router.push("/perfil/notificaciones")}
-            colors={colors}
-          />
-          <MRow
-            icon="target"
-            label="Umbrales de alerta"
-            onPress={() => Alert.alert("Próximamente", "Configuración de umbrales en breve.")}
-            colors={colors}
-          />
-          <MRow
-            icon="lock"
-            label="Cambiar contraseña"
-            onPress={() => router.push("/perfil/cambiar-password")}
-            colors={colors}
-          />
-          <MRow
-            icon="refresh-cw"
-            label="Repetir tutorial"
-            onPress={() => Alert.alert("Tutorial", "Función disponible próximamente.")}
-            colors={colors}
-            last
-          />
+        <SCard label="CONFIGURACIÓN" colors={colors}>
+          <MRow icon="bell" label="Notificaciones" onPress={() => router.push("/perfil/notificaciones")} colors={colors} />
+          <MRow icon="target" label="Umbrales de alerta" onPress={() => router.push("/umbrales" as any)} colors={colors} last />
         </SCard>
 
-        {/* Soporte */}
-        <SCard colors={colors}>
-          <MRow
-            icon="message-circle"
-            label="Soporte WhatsApp"
-            onPress={() => Linking.openURL("https://wa.me/5491100000000")}
-            colors={colors}
-          />
-          <MRow
-            icon="file-text"
-            label="Legal"
-            onPress={() => Alert.alert("Legal", "Términos y condiciones próximamente.")}
-            colors={colors}
-            last
-          />
+        <SCard label="SEGURIDAD" colors={colors}>
+          <MRow icon="lock" label="Cambiar contraseña" onPress={() => router.push("/perfil/cambiar-password")} colors={colors} last />
         </SCard>
 
-        {/* Logout */}
-        <TouchableOpacity
-          onPress={() => setLogoutModal(true)}
-          style={styles.logoutBtn}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.logoutText, { color: colors.statusCritical }]}>
-            Cerrar sesión
+        <SCard label="AYUDA" colors={colors}>
+          <MRow icon="info" label="Repetir tutorial" onPress={() => router.push("/tutorial")} colors={colors} />
+          <MRow icon="message-circle" label="Soporte por WhatsApp" onPress={() => Linking.openURL("https://wa.me/5491100000000")} colors={colors} />
+          <MRow icon="file-text" label="Términos y condiciones" onPress={() => {}} colors={colors} />
+          <MRow icon="shield" label="Política de privacidad" onPress={() => {}} colors={colors} last />
+        </SCard>
+
+        <Button variant="ghost" fullWidth onPress={() => setLogoutSheet(true)} style={{ marginTop: 8 }}>
+          <Text style={{ color: colors.statusCritical, fontSize: 14, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) }}>Cerrar sesión</Text>
+        </Button>
+
+        <View style={styles.footerRow}>
+          <Text style={[styles.version, { color: colors.textMuted }]}>SiloGuard v1.0.0</Text>
+          <Text style={[styles.version, { color: colors.textMuted }]}>·</Text>
+          <Text style={[styles.version, { color: colors.statusCritical }]} onPress={() => {}}>
+            Eliminar cuenta
           </Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.version, { color: colors.textSecondary }]}>
-          SiloGuard v1.0.0
-        </Text>
+        </View>
       </ScrollView>
 
-      {/* Logout confirmation modal — reemplaza Alert.alert nativo porque no se
-          renderiza al compartir pantalla (los botones no aparecen). */}
-      <Modal
-        visible={logoutModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLogoutModal(false)}
+      <BottomSheet
+        open={logoutSheet}
+        onClose={() => setLogoutSheet(false)}
+        title="¿Cerrar sesión?"
+        actions={[
+          <Button key="y" variant="danger" fullWidth loading={loggingOut} onPress={confirmLogout}>
+            Sí, cerrar sesión
+          </Button>,
+          <Button key="n" variant="ghost" fullWidth onPress={() => setLogoutSheet(false)}>
+            Cancelar
+          </Button>,
+        ]}
       >
-        <Pressable style={styles.overlay} onPress={() => setLogoutModal(false)} />
-        <View style={styles.modalCenter}>
-          <View
-            style={[
-              styles.modalCard,
-              { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault },
-            ]}
-          >
-            <View style={[styles.modalIcon, { backgroundColor: colors.statusCriticalTint }]}>
-              <Icon name="log-out" size={24} color={colors.statusCritical} />
-            </View>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-              Cerrar sesión
-            </Text>
-            <Text style={[styles.modalSub, { color: colors.textSecondary }]}>
-              Vas a salir de tu cuenta en este dispositivo.
-            </Text>
-            <TouchableOpacity
-              onPress={confirmLogout}
-              disabled={loggingOut}
-              style={[
-                styles.modalBtn,
-                { backgroundColor: colors.statusCritical, opacity: loggingOut ? 0.6 : 1 },
-              ]}
-            >
-              <Text style={[styles.modalBtnText, { color: "#fff" }]}>
-                {loggingOut ? "Cerrando…" : "Sí, cerrar sesión"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setLogoutModal(false)} style={styles.modalCancelBtn}>
-              <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>
-                Cancelar
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fontFamilyForWeight(FontWeight.regular) }}>
+          Vas a salir de tu cuenta en este dispositivo. Podés volver a iniciar sesión en cualquier momento.
+        </Text>
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: 56,
-    paddingBottom: 12,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  content: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: 12,
-    paddingBottom: Spacing.xl,
-  },
+  header: { paddingHorizontal: Spacing.md, paddingTop: 56, paddingBottom: 12 },
+  title: { fontSize: 26, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: -0.3 },
+  content: { paddingHorizontal: Spacing.md, paddingTop: 4, paddingBottom: Spacing.xl },
 
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingBottom: 16,
-    paddingTop: 4,
-    cursor: "pointer",
-  } as any,
-  userInfo: { flex: 1 },
-  userName: {
-    fontSize: FontSize.bodyLg,
-    fontWeight: "700",
-    letterSpacing: -0.2,
-  },
-  userEmail: {
-    fontSize: FontSize.bodySm,
-    marginTop: 2,
-  },
-  editLink: {
-    fontSize: FontSize.bodySm,
-    fontWeight: FontWeight.semibold as any,
-  },
+  identityCol: { alignItems: "center", paddingVertical: 16, paddingBottom: 20 },
+  userName: { fontSize: 20, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), marginTop: 12, marginBottom: 6, letterSpacing: -0.3 },
+  emailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  userEmail: { fontSize: 13, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-  farmCard: {
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    padding: 14,
-    marginBottom: 16,
-  },
-  farmRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  farmName: {
-    fontSize: FontSize.bodyMd + 1,
-    fontWeight: "600",
-  },
-  farmMeta: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  verifiedBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999 },
+  verifiedText: { fontSize: 11, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
 
-  cardLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 8,
-    marginLeft: 2,
-  },
-  card: {
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    overflow: "hidden",
-  },
-  mrow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 13,
-  },
-  mrowLabel: {
-    flex: 1,
-    fontSize: FontSize.bodyMd + 1,
-    fontWeight: FontWeight.medium as any,
-  },
-  mrowValue: {
-    fontSize: FontSize.bodySm,
-    marginRight: 4,
-  },
+  farmCard: { borderWidth: 1, borderRadius: Radius.lg, padding: 14, marginBottom: 16 },
+  farmRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+  farmName: { fontSize: 15, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
+  farmMeta: { fontSize: 12, lineHeight: 18, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-  logoutBtn: {
-    alignItems: "center",
-    paddingVertical: 14,
-    marginTop: 8,
-  },
-  logoutText: {
-    fontSize: FontSize.bodyMd,
-    fontWeight: "600",
-  },
-  version: {
-    fontSize: 11,
-    textAlign: "center",
-    marginTop: 12,
-  },
+  cardLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
+  card: { borderRadius: Radius.lg, borderWidth: 1, paddingHorizontal: 14 },
+  mrow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13 },
+  mrowLabel: { flex: 1, fontSize: 15, fontWeight: FontWeight.medium, fontFamily: fontFamilyForWeight(FontWeight.medium) },
+  mrowValue: { fontSize: 13, marginRight: 4, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
-  modalCenter: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", padding: 24 },
-  modalCard: { width: "100%", borderRadius: Radius.xl, borderWidth: 1, padding: 24, alignItems: "center" },
-  modalIcon: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 14 },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8, textAlign: "center" },
-  modalSub: { fontSize: 14, lineHeight: 22, textAlign: "center", marginBottom: 20 },
-  modalBtn: { width: "100%", borderRadius: Radius.md, paddingVertical: 14, alignItems: "center", marginBottom: 8 },
-  modalBtnText: { fontSize: 15, fontWeight: "700" },
-  modalCancelBtn: { paddingVertical: 10 },
-  modalCancelText: { fontSize: 14 },
+  footerRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 14 },
+  version: { fontSize: 11, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 });

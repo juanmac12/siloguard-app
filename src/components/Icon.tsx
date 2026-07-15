@@ -16,7 +16,8 @@ export type IconName =
   | 'map-pin' | 'message-circle' | 'phone' | 'moon' | 'smartphone'
   | 'refresh-cw' | 'lock' | 'file-text' | 'camera'
   | 'trash' | 'edit' | 'more-vertical' | 'log-out' | 'shield'
-  | 'inbox' | 'cloud-off' | 'search' | 'link';
+  | 'inbox' | 'cloud-off' | 'search' | 'link'
+  | 'eye' | 'eye-off' | 'copy' | 'share-2';
 
 type Props = {
   name: IconName;
@@ -35,6 +36,7 @@ export const ICON_NAMES: IconName[] = [
   'refresh-cw', 'lock', 'file-text', 'camera',
   'trash', 'edit', 'more-vertical', 'log-out', 'shield',
   'inbox', 'cloud-off', 'search', 'link',
+  'eye', 'eye-off', 'copy', 'share-2',
 ];
 
 export function Icon({ name, size = 24, color = Colors.textPrimary, strokeWidth = 2 }: Props) {
@@ -285,6 +287,35 @@ export function Icon({ name, size = 24, color = Colors.textPrimary, strokeWidth 
       <>
         <Path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5" {...common} />
         <Path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5" {...common} />
+      </>
+    ),
+    eye: (
+      <>
+        <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" {...common} />
+        <Circle cx="12" cy="12" r="3" {...common} />
+      </>
+    ),
+    'eye-off': (
+      <>
+        <Path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" {...common} />
+        <Path d="M6.61 6.61A13.53 13.53 0 0 0 2 11s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61" {...common} />
+        <Path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" {...common} />
+        <Line x1="2" x2="22" y1="2" y2="22" {...common} />
+      </>
+    ),
+    copy: (
+      <>
+        <Rect x="9" y="9" width="13" height="13" rx="2" {...common} />
+        <Path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" {...common} />
+      </>
+    ),
+    'share-2': (
+      <>
+        <Circle cx="18" cy="5" r="3" {...common} />
+        <Circle cx="6" cy="12" r="3" {...common} />
+        <Circle cx="18" cy="19" r="3" {...common} />
+        <Line x1="8.59" x2="15.42" y1="10.51" y2="6.49" {...common} />
+        <Line x1="8.59" x2="15.42" y1="13.49" y2="17.51" {...common} />
       </>
     ),
   };

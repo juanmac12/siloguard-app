@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
-import { Radius, Spacing, FontWeight } from '../constants/Theme';
+import { Radius, Spacing, FontWeight, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: FontWeight.bold,
+    fontFamily: fontFamilyForWeight(FontWeight.bold),
     letterSpacing: 0.3,
   },
 });

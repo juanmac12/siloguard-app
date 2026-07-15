@@ -187,11 +187,30 @@ export const Shadows = {
   },
 } as const;
 
-// Familia tipográfica. Si cargás Inter con expo-font, usá 'Inter'.
-// Mientras no esté cargada, RN cae al system font (que en iOS es muy parecido).
+/**
+ * Familia tipográfica. RN no soporta fontWeight sobre una única familia
+ * "Inter" — cada peso se carga como su propia familia vía @expo-google-fonts/inter
+ * (ver _layout.tsx). `fontFamilyForWeight` traduce un FontWeight al nombre cargado.
+ */
 export const FontFamily = {
-  sans: 'Inter',
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
 } as const;
+
+export function fontFamilyForWeight(weight: string): string {
+  switch (weight) {
+    case FontWeight.bold:
+      return FontFamily.bold;
+    case FontWeight.semibold:
+      return FontFamily.semibold;
+    case FontWeight.medium:
+      return FontFamily.medium;
+    default:
+      return FontFamily.regular;
+  }
+}
 
 export const Theme = {
   Colors,

@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { Icon } from "../../components";
+import { FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -24,13 +25,15 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: "600",
+          fontWeight: FontWeight.semibold,
+          fontFamily: fontFamilyForWeight(FontWeight.semibold),
         },
         tabBarBadgeStyle: {
           backgroundColor: "#EF4444",
           color: "#fff",
           fontSize: 10,
-          fontWeight: "700",
+          fontWeight: FontWeight.bold,
+          fontFamily: fontFamilyForWeight(FontWeight.bold),
           minWidth: 18,
           height: 18,
           borderRadius: 9,

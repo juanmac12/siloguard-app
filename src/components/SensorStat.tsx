@@ -5,7 +5,7 @@
  */
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Radius, Spacing, FontWeight, ThemeColors } from '../constants/Theme';
+import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icon, IconName } from './Icon';
 import { Tone } from './StatusBadge';
@@ -83,6 +83,7 @@ const makeStyles = (c: ThemeColors) =>
       color: c.textMuted,
       fontSize: 11,
       fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
       letterSpacing: 0.4,
       flexShrink: 1,
     },
@@ -96,11 +97,13 @@ const makeStyles = (c: ThemeColors) =>
       color: c.textPrimary,
       fontSize: 28,
       fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
       letterSpacing: -0.5,
     },
     unit: {
       color: c.textMuted,
       fontSize: 12,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
     },
   });
 

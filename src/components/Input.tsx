@@ -2,42 +2,44 @@
  * Input — campo con label arriba, focus ring verde, y estado de error.
  * Mantiene el patrón del DS: label bold tracked, superficie surface-2, borde hairline.
  */
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
-import { Radius, Spacing, FontWeight, ThemeColors } from '../constants/Theme';
+import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 type Props = TextInputProps & {
   label?: string;
   error?: string;
   leadingIcon?: React.ReactNode;
+  trailingIcon?: React.ReactNode;
 };
 
-export function Input({ label, error, leadingIcon, style, onFocus, onBlur, ...rest }: Props) {
+export function Input({ label, error, leadingIcon, trailingIcon, style, onFocus, onBlur, ...rest }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const borderRef = useRef<View>(null);
+  const [focused, setFocused] = useState(false);
 
-  const borderColor = error ? colors.statusCritical : colors.borderDefault;
+  const borderColor = error ? colors.statusCritical : focused ? colors.green : colors.borderDefault;
 
   return (
     <View style={styles.wrap}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View ref={borderRef} style={[styles.field, { borderColor }]}>
+      <View style={[styles.field, { borderColor }]}>
         {leadingIcon ? <View style={styles.leading}>{leadingIcon}</View> : null}
         <TextInput
           placeholderTextColor={colors.textMuted}
           style={[styles.input, style]}
           onFocus={(e) => {
-            borderRef.current?.setNativeProps({ style: { borderColor: colors.green } });
+            setFocused(true);
             onFocus?.(e);
           }}
           onBlur={(e) => {
-            borderRef.current?.setNativeProps({ style: { borderColor: error ? colors.statusCritical : colors.borderDefault } });
+            setFocused(false);
             onBlur?.(e);
           }}
           {...rest}
         />
+        {trailingIcon ? <View style={styles.trailing}>{trailingIcon}</View> : null}
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
@@ -53,6 +55,7 @@ const makeStyles = (c: ThemeColors) =>
       color: c.textMuted,
       fontSize: 12,
       fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
       letterSpacing: 0.3,
     },
     field: {
@@ -67,15 +70,20 @@ const makeStyles = (c: ThemeColors) =>
     leading: {
       marginRight: Spacing.sm,
     },
+    trailing: {
+      marginLeft: Spacing.sm,
+    },
     input: {
       flex: 1,
       color: c.textPrimary,
       fontSize: 16,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
       paddingVertical: 12,
     },
     error: {
       color: c.statusCritical,
       fontSize: 12,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
       letterSpacing: 0.3,
     },
   });
