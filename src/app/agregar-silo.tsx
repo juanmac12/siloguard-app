@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert,
+  StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ThemeColors, Radius } from "../constants/Theme";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAppData } from "../contexts/AppDataContext";
-import { ApiError } from "../config/api";
-import { Icon } from "../components";
+import { useConnState } from "../hooks/useConnState";
+import { useToast } from "../components/Toast";
+import { Icon, EmptyState } from "../components";
 
 const GRAIN_TYPES = ["Soja", "Maíz", "Trigo", "Girasol", "Sorgo", "Cebada", "Otro"];
 const STORAGE_TYPES = ["Silo fijo", "Silobolsa"];
@@ -32,12 +33,13 @@ interface FormErrors {
   tons?: string;
 }
 
-function r1(n: number) { return Math.round(n * 10) / 10; }
-
 export default function AgregarSiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { addSilo, notify } = useAppData();
+  const { addSilo } = useAppData();
+  const toast = useToast();
+  const conn = useConnState();
+  const offline = conn.state !== "online";
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [step, setStep] = useState<Step>("qr");
@@ -89,30 +91,39 @@ export default function AgregarSiloScreen() {
     const finalGrain = form.grain === "Otro" ? form.customGrain.trim() : form.grain;
     setSaving(true);
     try {
-      // El módulo SiloGuard todavía no manda una lectura real (QR/WiFi son simulación),
-      // así que se envía una lectura inicial plausible junto con el alta del silo —
-      // el backend la persiste en la misma transacción (POST /api/silos).
       await addSilo({
         name: form.name.trim(),
         grain: finalGrain,
         storage: form.storage,
         tons: Number(form.tons),
         acopio: form.acopio.trim(),
-        initialTemp: r1(22 + Math.random() * 3),
-        initialHum: r1(12 + Math.random() * 2),
-        initialCo2: Math.round(380 + Math.random() * 40),
       });
-      notify("Silo creado exitosamente");
+      toast.addToast({ tone: "ok", title: "Silo creado", message: `${form.name.trim()} ya está monitoreado.` });
       router.replace("/(tabs)/dashboard" as any);
-    } catch (error) {
-      const msg = error instanceof ApiError ? error.message : "No se pudo crear el silo. Intentá de nuevo.";
-      Alert.alert("Error", msg);
     } finally {
       setSaving(false);
     }
   };
 
   const stepIndex = step === "qr" ? 0 : step === "wifi" ? 1 : 2;
+
+  if (offline) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.header, { borderBottomColor: colors.borderDefault }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Icon name="chevron-left" size={24} color={colors.actionPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Agregar silo</Text>
+        </View>
+        <EmptyState
+          variant="offline"
+          title="Necesitás conexión"
+          body="Para vincular un nuevo dispositivo necesitás conexión a internet. Probá de nuevo cuando tengas señal."
+        />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>

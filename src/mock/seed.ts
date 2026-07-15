@@ -21,6 +21,8 @@ export interface RawSilo {
   co2: number;
   storage: "Silo fijo" | "Silobolsa";
   lastSignalAt: string;
+  /** Temperatura — últimos 7 días, usado por el Sparkline de Detalle de silo. */
+  trend: number[];
 }
 
 export interface RawAlert {
@@ -81,12 +83,12 @@ function minutesAgo(mins: number): string {
 }
 
 export const SEED_SILOS: RawSilo[] = [
-  { id: 1, name: "Silo Norte", grain: "Soja", tons: 180, acopio: "15 mar 2024", status: "ok", temp: 22.1, hum: 13.8, co2: 420, storage: "Silo fijo", lastSignalAt: minutesAgo(5) },
-  { id: 2, name: "Silo Sur", grain: "Maíz", tons: 240, acopio: "20 ene 2024", status: "critical", temp: 42.3, hum: 15.1, co2: 890, storage: "Silo fijo", lastSignalAt: minutesAgo(52) },
-  { id: 3, name: "Silo Este", grain: "Trigo", tons: 95, acopio: "08 feb 2024", status: "warn", temp: 28.4, hum: 18.2, co2: 550, storage: "Silobolsa", lastSignalAt: minutesAgo(8) },
-  { id: 4, name: "Silo Oeste", grain: "Soja", tons: 210, acopio: "01 abr 2024", status: "ok", temp: 21.8, hum: 13.2, co2: 390, storage: "Silo fijo", lastSignalAt: minutesAgo(3) },
-  { id: 5, name: "Silo 5", grain: "Girasol", tons: 120, acopio: "10 mar 2024", status: "ok", temp: 23.0, hum: 12.9, co2: 410, storage: "Silo fijo", lastSignalAt: minutesAgo(15) },
-  { id: 6, name: "Silo 6", grain: "Maíz", tons: 155, acopio: "22 feb 2024", status: "warn", temp: 30.1, hum: 16.8, co2: 620, storage: "Silobolsa", lastSignalAt: minutesAgo(20) },
+  { id: 1, name: "Silo Norte", grain: "Soja", tons: 180, acopio: "15 mar 2024", status: "ok", temp: 22.1, hum: 13.8, co2: 420, storage: "Silo fijo", lastSignalAt: minutesAgo(5), trend: [21.0, 21.4, 21.8, 22.0, 22.1, 22.3, 22.1] },
+  { id: 2, name: "Silo Sur", grain: "Maíz", tons: 240, acopio: "20 ene 2024", status: "critical", temp: 42.3, hum: 15.1, co2: 890, storage: "Silo fijo", lastSignalAt: minutesAgo(52), trend: [28.1, 31.2, 34.5, 37.8, 39.4, 41.1, 42.3] },
+  { id: 3, name: "Silo Este", grain: "Trigo", tons: 95, acopio: "08 feb 2024", status: "warn", temp: 28.4, hum: 18.2, co2: 550, storage: "Silobolsa", lastSignalAt: minutesAgo(8), trend: [25.0, 25.8, 26.4, 27.0, 27.8, 28.1, 28.4] },
+  { id: 4, name: "Silo Oeste", grain: "Soja", tons: 210, acopio: "01 abr 2024", status: "ok", temp: 21.8, hum: 13.2, co2: 390, storage: "Silo fijo", lastSignalAt: minutesAgo(3), trend: [22.1, 21.9, 21.8, 21.6, 21.7, 21.9, 21.8] },
+  { id: 5, name: "Silo 5", grain: "Girasol", tons: 120, acopio: "10 mar 2024", status: "ok", temp: 23.0, hum: 12.9, co2: 410, storage: "Silo fijo", lastSignalAt: minutesAgo(15), trend: [22.8, 23.0, 23.1, 22.9, 23.0, 23.2, 23.0] },
+  { id: 6, name: "Silo 6", grain: "Maíz", tons: 155, acopio: "22 feb 2024", status: "warn", temp: 30.1, hum: 16.8, co2: 620, storage: "Silobolsa", lastSignalAt: minutesAgo(20), trend: [26.0, 27.1, 28.0, 29.0, 29.5, 30.0, 30.1] },
 ];
 
 export const SEED_ALERTS: RawAlert[] = [

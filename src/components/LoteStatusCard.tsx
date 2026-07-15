@@ -15,10 +15,12 @@ export function LoteStatusCard({
   lote,
   onIniciar,
   onVerPasaporte,
+  disabled = false,
 }: {
   lote: Lote | null | undefined;
   onIniciar: () => void;
   onVerPasaporte: () => void;
+  disabled?: boolean;
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -33,7 +35,7 @@ export function LoteStatusCard({
           <Text style={styles.emptyTitle}>Sin lote iniciado</Text>
           <Text style={styles.emptyBody}>Iniciá el seguimiento de este acopio para emitir su certificado de calidad.</Text>
         </View>
-        <Button variant="secondary" size="sm" onPress={onIniciar}>
+        <Button variant="secondary" size="sm" onPress={onIniciar} disabled={disabled}>
           Iniciar lote
         </Button>
       </View>
@@ -43,7 +45,10 @@ export function LoteStatusCard({
   const isMon = lote.status === 'monitoring';
 
   return (
-    <Pressable onPress={onVerPasaporte} style={({ pressed }) => [styles.card, pressed ? { opacity: 0.9 } : null]}>
+    <Pressable
+      onPress={disabled ? undefined : onVerPasaporte}
+      style={({ pressed }) => [styles.card, disabled ? { opacity: 0.55 } : null, pressed && !disabled ? { opacity: 0.9 } : null]}
+    >
       <ScoreRing score={lote.score} size={44} stroke={4} />
       <View style={styles.textCol}>
         <View style={styles.statusRow}>

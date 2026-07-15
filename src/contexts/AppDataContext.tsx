@@ -44,6 +44,7 @@ export interface Silo {
   storage: string;
   lastUpdate: string;
   lastSignalAt: string;
+  trend: number[];
 }
 
 export interface SiloAlert {
@@ -150,6 +151,7 @@ function mapSilo(r: RawSilo): Silo {
     storage: r.storage,
     lastUpdate: formatRelativeTime(r.lastSignalAt),
     lastSignalAt: r.lastSignalAt,
+    trend: r.trend,
   };
 }
 
@@ -322,6 +324,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         co2: 400,
         storage: payload.storage as RawSilo["storage"],
         lastSignalAt: new Date().toISOString(),
+        trend: [22, 22, 22, 22, 22, 22, 22],
       };
       setThresholds((t) => ({ ...t, [id]: defaultThresholds(payload.grain) }));
       return [...prev, next];

@@ -1,108 +1,149 @@
-import { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { useMemo, useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ThemeColors, Radius, Spacing } from "../../constants/Theme";
+import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { siloApi } from "../../services/siloApi";
-import { LecturaResponse } from "../../services/types";
-import { Icon } from "../../components";
+import { Icon, Tabs, ZoneChart } from "../../components";
+import type { Silo } from "../../contexts/AppDataContext";
 
-const RANGES = ["24h", "48h", "7d"] as const;
-type Range = typeof RANGES[number];
+type Variable = "temp" | "hum" | "co2";
 
-const CHART_H = 140;
-const BAR_W   = 7;
+const TH: Record<Variable, { warn: number; crit: number }> = {
+  temp: { warn: 28, crit: 35 },
+  hum: { warn: 16, crit: 20 },
+  co2: { warn: 600, crit: 800 },
+};
 
-// Tamaño de página real contra la API — el usuario pagina de a 24 lecturas con
-// "Cargar más lecturas", en vez de traer todo el rango de una sola vez.
-const PAGE_SIZE = 24;
-const WEEKDAY = ["D", "L", "M", "M", "J", "V", "S"];
+const VCFG: Record<Variable, { label: string; icon: "thermometer" | "droplet" | "wind"; unit: string }> = {
+  temp: { label: "Temperatura", icon: "thermometer", unit: "°C" },
+  hum: { label: "Humedad", icon: "droplet", unit: "%" },
+  co2: { label: "CO₂", icon: "wind", unit: "ppm" },
+};
 
-interface ChartPoint {
-  hora: string;
-  co2: number;
-  temp: number;
-  hum: number;
+const RANGES = [
+  { id: "24", label: "24h", hours: 24 },
+  { id: "48", label: "48h", hours: 48 },
+  { id: "72", label: "72h", hours: 72 },
+  { id: "168", label: "7 días", hours: 168 },
+];
+
+/** Generador determinista (mismo silo -> misma curva) — portado de historial-screen.jsx. */
+function rng(seed: number) {
+  let s = ((seed % 2147483647) + 2147483647) % 2147483647 || 1;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
 }
 
-// Las lecturas vienen del backend ordenadas de más reciente a más vieja y con cadencia
-// horaria; acá se agrupan en 7 baldes (promediando) para que el bar chart no se sature.
-function bucketize(items: LecturaResponse[], range: Range): ChartPoint[] {
-  const chrono = [...items].reverse();
-  const bucketCount = 7;
-  const size = Math.max(1, Math.ceil(chrono.length / bucketCount));
-  const buckets: ChartPoint[] = [];
-
-  for (let i = 0; i < chrono.length; i += size) {
-    const slice = chrono.slice(i, i + size);
-    if (slice.length === 0) continue;
-    const avg = (sel: (r: LecturaResponse) => number) =>
-      slice.reduce((s, r) => s + sel(r), 0) / slice.length;
-    const last = slice[slice.length - 1];
-    const date = new Date(last.timestamp);
-    const hora = range === "7d" ? WEEKDAY[date.getDay()] : String(date.getHours()).padStart(2, "0");
-
-    buckets.push({
-      hora,
-      co2: Math.round(avg((r) => r.co2)),
-      temp: Math.round(avg((r) => r.temp) * 10) / 10,
-      hum: Math.round(avg((r) => r.hum) * 10) / 10,
-    });
+function genData(silo: Silo) {
+  const r = rng(silo.id * 7919 + 42);
+  const N = 169;
+  function curve(end: number, range: number, shape: "exp" | "sig" | "linear", noise: number, daily: number) {
+    const start = end - range;
+    const arr: number[] = [];
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      let b: number;
+      if (shape === "exp") b = start + range * Math.pow(t, 2.2);
+      else if (shape === "sig") b = start + range / (1 + Math.exp(-10 * (t - 0.45)));
+      else b = start + range * t;
+      arr.push(+(b + (r() - 0.5) * 2 * noise + daily * Math.sin((i / 24) * Math.PI * 2 - 0.9)).toFixed(1));
+    }
+    arr[N - 1] = end;
+    return arr;
   }
-
-  return buckets.slice(-7);
+  const c = silo.status === "critical";
+  const w = silo.status === "warn";
+  return {
+    temp: curve(silo.temp, c ? 16 : w ? 5 : 2, c ? "exp" : "linear", c ? 0.6 : 0.3, c ? 0.8 : 1.2),
+    hum: curve(silo.hum, c ? 3 : w ? 3 : 1, "linear", 0.4, 0.3),
+    co2: curve(silo.co2, c ? 400 : w ? 120 : 40, c ? "sig" : "linear", c ? 15 : 8, 5),
+  };
 }
 
-function norm(val: number, min: number, max: number): number {
-  return Math.max(6, Math.min(CHART_H, ((val - min) / (max - min)) * CHART_H));
+function getVal(silo: Silo, v: Variable): number {
+  return v === "temp" ? silo.temp : v === "hum" ? silo.hum : silo.co2;
 }
 
-const CO2_COLOR  = "#22C55E";
-const TEMP_COLOR = "#F59E0B";
-const HUM_COLOR  = "#3B82F6";
+function getTone(silo: Silo, v: Variable): "ok" | "warn" | "critical" {
+  const val = getVal(silo, v);
+  return val >= TH[v].crit ? "critical" : val >= TH[v].warn ? "warn" : "ok";
+}
 
-function BarChart({ data, colors }: { data: ChartPoint[]; colors: ThemeColors }) {
+function statusMsg(tone: "ok" | "warn" | "critical", slice: number[], th: { warn: number; crit: number }): string {
+  const len = slice.length;
+  const critIdx = slice.findIndex((v) => v >= th.crit);
+  const warnIdx = slice.findIndex((v) => v >= th.warn);
+  if (tone === "critical" && critIdx >= 0 && critIdx < len - 1) return `Superó el límite hace ${len - 1 - critIdx}h`;
+  if (tone === "warn" && warnIdx >= 0 && warnIdx < len - 1) return `En advertencia hace ${len - 1 - warnIdx}h`;
+  if (tone === "ok") return "Dentro del rango seguro";
+  return "";
+}
+
+function VariablePanel({ variable, silo, data, timeRangeHours, colors, styles }: {
+  variable: Variable;
+  silo: Silo;
+  data: Record<Variable, number[]>;
+  timeRangeHours: number;
+  colors: ThemeColors;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const cfg = VCFG[variable];
+  const th = TH[variable];
+  const slice = data[variable].slice(168 - timeRangeHours);
+  const cv = getVal(silo, variable);
+  const tone = getTone(silo, variable);
+  const hex = tone === "critical" ? colors.statusCritical : tone === "warn" ? colors.statusWarn : colors.statusOk;
+  const msg = statusMsg(tone, slice, th);
+
+  const mn = Math.min(...slice).toFixed(1);
+  const mx = Math.max(...slice).toFixed(1);
+  const avg = (slice.reduce((a, b) => a + b, 0) / slice.length).toFixed(1);
+  const toneLabel = tone === "critical" ? "CRÍTICO" : tone === "warn" ? "ADVERTENCIA" : "OK";
+
   return (
-    <View>
-      <Text style={{ fontSize: 10, color: colors.textSecondary, marginBottom: 6 }}>CO₂ (ppm)</Text>
-
-      <View style={{ flexDirection: "row", alignItems: "flex-end", height: CHART_H, gap: 6 }}>
-        {data.map((d, i) => {
-          const hCo2  = norm(d.co2,  150, 1000);
-          const hTemp = norm(d.temp,  15,  45);
-          const hHum  = norm(d.hum,   10,  25);
-          return (
-            <View key={i} style={{ flex: 1, alignItems: "center" }}>
-              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: CHART_H }}>
-                <View style={{ width: BAR_W, height: hCo2,  backgroundColor: CO2_COLOR,  borderRadius: 3 }} />
-                <View style={{ width: BAR_W, height: hTemp, backgroundColor: TEMP_COLOR, borderRadius: 3 }} />
-                <View style={{ width: BAR_W, height: hHum,  backgroundColor: HUM_COLOR,  borderRadius: 3 }} />
-              </View>
-            </View>
-          );
-        })}
+    <View style={[styles.panel, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, borderTopColor: hex }]}>
+      <View style={styles.panelHeader}>
+        <View style={{ gap: 6, flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            <Icon name={cfg.icon} size={15} color={colors.textSecondary} />
+            <Text style={[styles.panelLabel, { color: colors.textSecondary }]}>{cfg.label}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+            <View style={[styles.dot, { backgroundColor: hex }]} />
+            <Text style={[styles.toneLabel, { color: hex }]}>{toneLabel}</Text>
+            {msg ? <Text style={[styles.msg, { color: colors.textMuted }]}>· {msg}</Text> : null}
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3, marginLeft: 12 }}>
+          <Text style={[styles.panelValue, { color: colors.textPrimary }]}>{cv}</Text>
+          <Text style={[styles.panelUnit, { color: colors.textSecondary }]}>{cfg.unit}</Text>
+        </View>
       </View>
 
-      <View style={{ flexDirection: "row", marginTop: 6, gap: 6 }}>
-        {data.map((d, i) => (
-          <View key={i} style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ fontSize: 9, color: colors.textSecondary }}>
-              {d.hora}{d.hora.length <= 2 && !WEEKDAY.includes(d.hora) ? "h" : ""}
-            </Text>
+      <View style={{ paddingHorizontal: 8, paddingBottom: 4 }}>
+        <ZoneChart slice={slice} warn={th.warn} crit={th.crit} timeRange={timeRangeHours} />
+      </View>
+
+      <View style={[styles.legendRow, { borderTopColor: colors.borderDefault, backgroundColor: colors.surfaceApp }]}>
+        {([["Seguro", colors.statusOk], ["Advertencia", colors.statusWarn], ["Crítico", colors.statusCritical]] as [string, string][]).map(([l, cHex]) => (
+          <View key={l} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: cHex, opacity: 0.7 }} />
+            <Text style={[styles.legendText, { color: colors.textMuted }]}>{l}</Text>
           </View>
         ))}
       </View>
 
-      <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 10 }}>
-        {[
-          { color: CO2_COLOR,  label: "CO₂ (ppm)" },
-          { color: TEMP_COLOR, label: "Temp (°C)" },
-          { color: HUM_COLOR,  label: "Humedad (%)" },
-        ].map((l) => (
-          <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <View style={{ width: 10, height: 4, borderRadius: 2, backgroundColor: l.color }} />
-            <Text style={{ fontSize: 11, color: colors.textSecondary }}>{l.label}</Text>
+      <View style={[styles.statsRow, { borderTopColor: colors.borderDefault }]}>
+        {([["Mín", mn], ["Máx", mx], ["Prom", avg]] as [string, string][]).map(([label, val], i) => (
+          <View key={label} style={[styles.statCol, i < 2 ? { borderRightWidth: 1, borderRightColor: colors.borderDefault } : null]}>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>{label}</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+              {val}
+              <Text style={[styles.statUnit, { color: colors.textSecondary }]}> {cfg.unit}</Text>
+            </Text>
           </View>
         ))}
       </View>
@@ -115,132 +156,48 @@ export default function HistorialScreen() {
   const { colors } = useTheme();
   const { silos } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [range, setRange] = useState<Range>("24h");
-  const [items, setItems] = useState<LecturaResponse[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const { id, variable } = useLocalSearchParams<{ id: string; variable?: string }>();
+  const [range, setRange] = useState<string>("48");
 
   const silo = silos.find((s) => s.id === Number(id));
-  const siloName = silo?.name ?? `Silo ${id}`;
+  const data = useMemo(() => (silo ? genData(silo) : null), [silo?.id]);
 
-  // Cambiar de rango reinicia la paginación: se vuelve a pedir la página 1.
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setPage(1);
-    siloApi
-      .getLecturas(Number(id), range, 1, PAGE_SIZE)
-      .then((res) => {
-        setItems(res.items);
-        setTotalPages(res.totalPages);
-        setTotalCount(res.totalCount);
-      })
-      .catch(() => {
-        setItems([]);
-        setTotalPages(1);
-        setTotalCount(0);
-      })
-      .finally(() => setLoading(false));
-  }, [id, range]);
+  if (!silo || !data) return null;
 
-  const loadMore = async () => {
-    if (loadingMore || page >= totalPages) return;
-    setLoadingMore(true);
-    try {
-      const nextPage = page + 1;
-      const res = await siloApi.getLecturas(Number(id), range, nextPage, PAGE_SIZE);
-      setItems((prev) => [...prev, ...res.items]);
-      setPage(nextPage);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const data = useMemo(() => bucketize(items, range), [items, range]);
-
-  const avgCo2  = items.length ? Math.round(items.reduce((s, d) => s + d.co2, 0) / items.length) : 0;
-  const maxTemp = items.length ? Math.max(...items.map((d) => d.temp)) : 0;
-  const avgHum  = items.length ? (items.reduce((s, d) => s + d.hum, 0) / items.length).toFixed(1) : "0.0";
-
-  const STATS = [
-    { label: "CO₂ prom.", value: String(avgCo2), unit: "ppm",     trendColor: CO2_COLOR },
-    { label: "Temp máx.", value: `${maxTemp}°`,  unit: "celsius", trendColor: colors.textSecondary },
-    { label: "Hum prom.", value: avgHum,         unit: "%",       trendColor: TEMP_COLOR },
-  ];
+  const timeRangeHours = RANGES.find((r) => r.id === range)?.hours ?? 48;
+  const order: Variable[] = variable === "hum" ? ["hum", "temp", "co2"] : variable === "co2" ? ["co2", "temp", "hum"] : ["temp", "hum", "co2"];
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="chevron-left" size={24} color={colors.actionPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Historial — {siloName}</Text>
+        </Pressable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>Historial de sensores</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>{silo.name} · {silo.grain}</Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Icon name="wifi" size={12} color={colors.textMuted} />
+          <Text style={styles.lastSync}>{silo.lastUpdate}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.rangeWrap, { borderBottomColor: colors.borderDefault }]}>
+        <Tabs variant="pill" fullWidth activeId={range} onChange={setRange} items={RANGES.map((r) => ({ id: r.id, label: r.label }))} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Range selector */}
-        <View style={styles.rangeRow}>
-          {RANGES.map((r) => (
-            <TouchableOpacity
-              key={r}
-              onPress={() => setRange(r)}
-              style={[styles.rangeTab, { backgroundColor: range === r ? colors.actionPrimary : colors.surfaceCard, borderColor: range === r ? colors.actionPrimary : colors.borderDefault }]}
-            >
-              <Text style={[styles.rangeText, { color: range === r ? colors.actionPrimaryText : colors.textSecondary }]}>{r}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[styles.hint, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
+          <Icon name="info" size={14} color={colors.textMuted} />
+          <Text style={[styles.hintText, { color: colors.textMuted }]}>
+            Las bandas de color muestran las <Text style={{ color: colors.textSecondary, fontWeight: FontWeight.semibold }}>zonas segura, de advertencia y crítica</Text>. La línea es el recorrido del sensor en el período elegido.
+          </Text>
         </View>
 
-        {/* Bar chart */}
-        <View style={[styles.chartCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
-          {loading ? (
-            <Text style={{ color: colors.textSecondary, textAlign: "center", paddingVertical: 40 }}>Cargando…</Text>
-          ) : data.length === 0 ? (
-            <Text style={{ color: colors.textSecondary, textAlign: "center", paddingVertical: 40 }}>
-              Todavía no hay datos para este período.
-            </Text>
-          ) : (
-            <BarChart data={data} colors={colors} />
-          )}
-        </View>
-
-        {/* Summary stats */}
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Resumen últimas {range}</Text>
-        <View style={styles.statsRow}>
-          {STATS.map((s) => (
-            <View key={s.label} style={[styles.statCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{s.label}</Text>
-              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{s.value}</Text>
-              <Text style={[styles.statUnit, { color: colors.textSecondary }]}>{s.unit}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Paginado real contra /api/silos/{id}/lecturas */}
-        {totalCount > 0 && (
-          <View style={styles.pagingBox}>
-            <Text style={[styles.pagingText, { color: colors.textSecondary }]}>
-              Mostrando {items.length} de {totalCount} lecturas (página {page} de {totalPages})
-            </Text>
-            {page < totalPages && (
-              <TouchableOpacity
-                onPress={loadMore}
-                disabled={loadingMore}
-                style={[styles.loadMoreBtn, { borderColor: colors.borderDefault, opacity: loadingMore ? 0.6 : 1 }]}
-              >
-                <Text style={[styles.loadMoreText, { color: colors.actionPrimary }]}>
-                  {loadingMore ? "Cargando…" : "Cargar más lecturas"}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+        {order.map((v) => (
+          <VariablePanel key={v} variable={v} silo={silo} data={data} timeRangeHours={timeRangeHours} colors={colors} styles={styles} />
+        ))}
       </ScrollView>
     </View>
   );
@@ -250,38 +207,42 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
     header: {
-      flexDirection: "row", alignItems: "center", gap: 4,
-      paddingTop: 56, paddingBottom: 10, paddingHorizontal: 8,
-      borderBottomWidth: 1, borderBottomColor: c.borderDefault,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingTop: 56,
+      paddingBottom: 10,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderDefault,
     },
     backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-    headerTitle: { flex: 1, fontSize: 17, fontWeight: "700", color: c.textPrimary },
+    headerTitle: { fontSize: 17, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold), color: c.textPrimary },
+    headerSub: { fontSize: 12, color: c.textSecondary, marginTop: 1, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    lastSync: { fontSize: 11, color: c.textMuted, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-    scroll: { padding: 16, paddingBottom: 40 },
+    rangeWrap: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
 
-    rangeRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
-    rangeTab: {
-      paddingHorizontal: 20, paddingVertical: 9,
-      borderRadius: Radius.full, borderWidth: 1,
-    },
-    rangeText: { fontSize: 13, fontWeight: "600" },
+    scroll: { padding: 16, paddingTop: 14, gap: 14, paddingBottom: 32 },
 
-    chartCard: {
-      borderRadius: Radius.lg, borderWidth: 1,
-      padding: 14, marginBottom: 20,
-    },
+    hint: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 10, borderRadius: Radius.md, borderWidth: 1, marginBottom: 14 },
+    hintText: { flex: 1, fontSize: 12, lineHeight: 18, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-    sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10 },
-    statsRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
-    statCard: {
-      flex: 1, borderRadius: Radius.lg, borderWidth: 1, padding: 10,
-    },
-    statLabel: { fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 },
-    statValue: { fontSize: 20, fontWeight: "700", letterSpacing: -0.3 },
-    statUnit: { fontSize: 10, marginBottom: 4 },
+    panel: { borderRadius: Radius.lg, borderWidth: 1, borderTopWidth: 3, overflow: "hidden", marginBottom: 14 },
+    panelHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", padding: 14, paddingBottom: 10 },
+    panelLabel: { fontSize: 13, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold), letterSpacing: 0.2 },
+    dot: { width: 7, height: 7, borderRadius: 3.5 },
+    toneLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.5 },
+    msg: { fontSize: 11, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    panelValue: { fontSize: 30, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: -1, lineHeight: 32 },
+    panelUnit: { fontSize: 13, fontWeight: FontWeight.medium, fontFamily: fontFamilyForWeight(FontWeight.medium) },
 
-    pagingBox: { alignItems: "center", gap: 10, paddingTop: 4 },
-    pagingText: { fontSize: 12 },
-    loadMoreBtn: { borderWidth: 1, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
-    loadMoreText: { fontSize: 13, fontWeight: "600" },
+    legendRow: { flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1 },
+    legendText: { fontSize: 10, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+
+    statsRow: { flexDirection: "row", borderTopWidth: 1 },
+    statCol: { flex: 1, paddingVertical: 10, alignItems: "center" },
+    statLabel: { fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontFamily: fontFamilyForWeight(FontWeight.regular), marginBottom: 3 },
+    statValue: { fontSize: 14, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: -0.3 },
+    statUnit: { fontSize: 11, fontWeight: FontWeight.regular, fontFamily: fontFamilyForWeight(FontWeight.regular) },
   });
