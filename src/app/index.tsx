@@ -83,7 +83,9 @@ export default function SplashScreen() {
       })
     ).start();
 
-    const timer = setTimeout(() => setMinDelayDone(true), 1600);
+    // 2s en vez de 1.6s: en Expo Go con Fast Refresh el splash pasaba casi
+    // desapercibido — un poco más de aire para que se note en la demo.
+    const timer = setTimeout(() => setMinDelayDone(true), 2000);
     return () => clearTimeout(timer);
   }, []);
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Pressable, Platform } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Pressable, Platform, Alert } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Spacing, ThemeColors, Radius } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -105,12 +106,25 @@ export default function LoteDetailScreen() {
   if (!lote) return null;
   const isMon = lote.status === "monitoring";
 
-  const copyLink = () => {
+  const verifyLink = `https://siloguard.com/verify/${lote.codigo}`;
+
+  const copyLink = async () => {
+    // Copia real al portapapeles (expo-clipboard) — antes solo cambiaba el texto en
+    // pantalla sin copiar nada.
+    await Clipboard.setStringAsync(verifyLink);
     setCopied(true);
     setTimeout(() => {
       setCopied(false);
       setShowShare(false);
     }, 1200);
+  };
+
+  // Descarga de PDF y export a imagen quedan para una próxima iteración (requieren
+  // expo-print / captura de vista). Avisamos explícitamente en vez de fingir que
+  // pasó algo cuando el botón no hace nada.
+  const notifyComingSoon = (feature: string) => {
+    setShowShare(false);
+    Alert.alert("Próximamente", `${feature} va a estar disponible en una próxima actualización.`);
   };
 
   return (
@@ -189,9 +203,9 @@ export default function LoteDetailScreen() {
           <Pressable style={[styles2.sheet, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
             <Text style={styles2.sheetTitle}>Compartir certificado</Text>
             <View style={{ gap: 8 }}>
-              <ShareOption icon="file-text" label="Descargar como PDF" sub="Documento listo para imprimir" onPress={() => setShowShare(false)} colors={colors} />
-              <ShareOption icon="camera" label="Compartir como imagen" sub="Ideal para WhatsApp o email" onPress={() => setShowShare(false)} colors={colors} />
-              <ShareOption icon="link" label={copied ? "¡Link copiado!" : "Copiar link de verificación"} sub={`siloguard.com/verify/${lote.codigo}`} onPress={copyLink} colors={colors} />
+              <ShareOption icon="file-text" label="Descargar como PDF" sub="Próximamente" onPress={() => notifyComingSoon("La descarga en PDF")} colors={colors} />
+              <ShareOption icon="camera" label="Compartir como imagen" sub="Próximamente" onPress={() => notifyComingSoon("Compartir como imagen")} colors={colors} />
+              <ShareOption icon="link" label={copied ? "¡Link copiado!" : "Copiar link de verificación"} sub={verifyLink.replace("https://", "")} onPress={copyLink} colors={colors} />
               <ShareOption icon="scan-qr" label="Ver QR grande" sub="Para mostrar o escanear en persona" onPress={() => { setShowShare(false); setShowQR(true); }} colors={colors} />
             </View>
           </Pressable>

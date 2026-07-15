@@ -5,6 +5,7 @@
  */
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Radius, Type, ThemeColors } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icon } from './Icon';
@@ -17,7 +18,8 @@ type Props = {
 
 export function AuthHeader({ title, showBack = true, onBack }: Props) {
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
 
   return (
     <View style={styles.bar}>
@@ -37,10 +39,11 @@ export function AuthHeader({ title, showBack = true, onBack }: Props) {
   );
 }
 
-const makeStyles = (c: ThemeColors) =>
+const makeStyles = (c: ThemeColors, topInset: number) =>
   StyleSheet.create({
     bar: {
-      height: 54,
+      height: 54 + topInset,
+      paddingTop: topInset,
       paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',

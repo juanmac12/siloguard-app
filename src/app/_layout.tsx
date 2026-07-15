@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
 import { AppDataProvider } from "../contexts/AppDataContext";
 
@@ -21,10 +22,12 @@ function RootNav() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AppDataProvider>
-        <RootNav />
-      </AppDataProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppDataProvider>
+          <RootNav />
+        </AppDataProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
