@@ -6,12 +6,13 @@ import { ThemeColors, Radius, Spacing } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { AuthHeader, Button, Icon, IconName } from "../../components";
-import { loadThresholds, saveThresholdsForSilo, SiloThresholds, MetricThreshold } from "../../services/thresholdsStorage";
+import { umbralApi, SiloThresholds, MetricThreshold } from "../../services/umbralApi";
+import { ApiError } from "../../config/api";
 
 type VarKey = "temp" | "hum" | "co2";
 
-// Umbrales recomendados por defecto. TODO: reemplazar por recomendaciones
-// agronómicas reales por tipo de grano cuando el backend las provea.
+// Umbrales recomendados (mismos defaults que devuelve la API cuando el silo
+// no tiene personalización guardada).
 const RECOMMENDED: SiloThresholds = {
   temp: { warn: 28, crit: 35 },
   hum: { warn: 16, crit: 20 },
@@ -137,10 +138,12 @@ export default function UmbralesEditorScreen() {
 
   useEffect(() => {
     if (!silo) return;
-    loadThresholds().then((all) => {
-      setValues(all[silo.id] ?? RECOMMENDED);
-      setLoading(false);
-    });
+    // Umbrales reales desde la API (GET /api/silos/{id}/umbrales).
+    umbralApi
+      .get(silo.id)
+      .then(({ thresholds }) => setValues(thresholds))
+      .catch(() => setValues(RECOMMENDED))
+      .finally(() => setLoading(false));
   }, [silo?.id]);
 
   if (!silo) return null;
@@ -155,14 +158,29 @@ export default function UmbralesEditorScreen() {
     }
     setSaving(true);
     try {
-      await saveThresholdsForSilo(silo.id, values);
-      Alert.alert("Guardado", "Los umbrales se guardaron en este dispositivo.");
+      // PUT transaccional: reemplaza los 3 umbrales del silo en el servidor.
+      const saved = await umbralApi.save(silo.id, values);
+      setValues(saved);
+      Alert.alert("Guardado", `Umbrales actualizados para ${silo.name}.`);
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "No se pudieron guardar los umbrales.";
+      Alert.alert("Error", msg);
     } finally {
       setSaving(false);
     }
   };
 
-  const restoreAll = () => setValues(RECOMMENDED);
+  const restoreAll = async () => {
+    try {
+      // DELETE: borra la personalización → el silo vuelve a los recomendados.
+      await umbralApi.restore(silo.id);
+      setValues(RECOMMENDED);
+      Alert.alert("Restaurado", "El silo vuelve a usar los umbrales recomendados.");
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "No se pudieron restaurar los umbrales.";
+      Alert.alert("Error", msg);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -175,7 +193,7 @@ export default function UmbralesEditorScreen() {
           <View style={[styles.infoBox, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
             <Icon name="info" size={15} color={colors.textSecondary} />
             <Text style={styles.infoText}>
-              Estos umbrales se guardan solo en este dispositivo por ahora. Todavía no se sincronizan con el servidor.
+              Los umbrales se guardan en el servidor y definen cuándo este silo pasa a Advertencia o Crítico.
             </Text>
           </View>
 

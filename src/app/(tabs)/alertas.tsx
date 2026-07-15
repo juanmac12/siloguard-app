@@ -1,16 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Spacing, FontSize, ThemeColors, Radius } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
-import { useAppData } from "../../contexts/AppDataContext";
+import { useAppData, SiloAlert } from "../../contexts/AppDataContext";
 import { AlertCard, Icon } from "../../components";
 
+// Cada solapa se traduce a los query params ?status=&variant= que resuelve la API
+// (rúbrica 3.4: consulta con 2 parámetros filtrada en el servidor, no en el cliente).
 const TABS = [
-  { id: "todas",        label: "Todas" },
-  { id: "criticas",     label: "Críticas" },
-  { id: "advertencias", label: "Advertencias" },
-  { id: "resueltas",    label: "Resueltas" },
+  { id: "todas",        label: "Todas",        status: undefined,  variant: undefined },
+  { id: "criticas",     label: "Críticas",     status: "active",   variant: "critical" },
+  { id: "advertencias", label: "Advertencias", status: "active",   variant: "warning" },
+  { id: "resueltas",    label: "Resueltas",    status: "resolved", variant: undefined },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -18,17 +20,21 @@ type TabId = typeof TABS[number]["id"];
 export default function AlertasScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { alerts } = useAppData();
+  const { alerts, filterAlerts } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<TabId>("todas");
+  const [filtered, setFiltered] = useState<SiloAlert[]>(alerts);
 
-  const filtered = alerts.filter((a) => {
-    if (activeTab === "todas")        return true;
-    if (activeTab === "criticas")     return a.status === "active" && a.variant === "critical";
-    if (activeTab === "advertencias") return a.status === "active" && a.variant === "warning";
-    if (activeTab === "resueltas")    return a.status === "resolved";
-    return true;
-  });
+  // Al cambiar de solapa, el filtrado lo hace la API: GET /api/alertas?status=&variant=.
+  // Si la consulta falla (p. ej. sin conexión), se mantiene la última lista conocida.
+  useEffect(() => {
+    const tab = TABS.find((t) => t.id === activeTab)!;
+    let cancelled = false;
+    filterAlerts(tab.status, tab.variant)
+      .then((result) => { if (!cancelled) setFiltered(result); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeTab, alerts]);
 
   const counts = {
     todas:        alerts.length,

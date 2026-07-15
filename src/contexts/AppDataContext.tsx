@@ -158,6 +158,8 @@ interface AppDataContextValue {
   updateSilo: (id: number, payload: SiloUpdatePayload) => Promise<void>;
   deleteSilo: (id: number) => Promise<void>;
   resolveAlert: (id: number, note?: string, reason?: string) => Promise<void>;
+  // Filtro resuelto en la API (GET /api/alertas?status=&variant=), no en el cliente.
+  filterAlerts: (status?: string, variant?: string) => Promise<SiloAlert[]>;
   iniciarLote: (siloId: number) => Promise<void>;
   finalizarLote: (id: number) => Promise<void>;
   notify: (msg: string) => void;
@@ -244,6 +246,13 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setAlerts((prev) => prev.map((a) => (a.id === id ? mapAlert(updated) : a)));
   };
 
+  // El filtrado se resuelve en el servidor: la API traduce status/variant a un
+  // WHERE en la consulta (AlertaRepository.ListByUserAsync), no filtramos acá.
+  const filterAlerts = async (status?: string, variant?: string) => {
+    const result = await alertaApi.list(status, variant);
+    return result.map(mapAlert);
+  };
+
   const iniciarLote = async (siloId: number) => {
     const created = await loteApi.iniciar(siloId);
     setLotes((prev) => [mapLote(created), ...prev]);
@@ -279,6 +288,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         updateSilo,
         deleteSilo,
         resolveAlert,
+        filterAlerts,
         iniciarLote,
         finalizarLote,
         notify,
