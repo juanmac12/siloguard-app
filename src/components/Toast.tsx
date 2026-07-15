@@ -8,6 +8,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { Icon, IconName } from './Icon';
 
 export type ToastTone = 'ok' | 'warn' | 'critical' | 'info';
@@ -121,11 +122,12 @@ function ToastAnimated({
   styles: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }) {
+  const reducedMotion = useReducedMotion();
   const anim = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-  }, [anim]);
+    Animated.timing(anim, { toValue: 1, duration: reducedMotion ? 0 : 200, useNativeDriver: true }).start();
+  }, [anim, reducedMotion]);
 
   const color = toneColorFor(colors, item.tone);
 

@@ -7,6 +7,7 @@ import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { Radius, Spacing, FontWeight, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -43,6 +44,7 @@ export function Button({
   style,
 }: Props) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   const s = SIZES[size];
 
   const variantStyle: Record<Variant, ViewStyle> = {
@@ -75,7 +77,11 @@ export function Button({
           width: fullWidth ? '100%' : undefined,
         },
         variantStyle[variant],
-        pressed && !disabled ? { transform: [{ scale: 0.985 }], opacity: 0.92 } : null,
+        pressed && !disabled
+          ? reducedMotion
+            ? { opacity: 0.85 }
+            : { transform: [{ scale: 0.985 }], opacity: 0.92 }
+          : null,
         disabled ? { opacity: 0.4 } : null,
         style,
       ]}

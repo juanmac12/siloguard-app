@@ -4,7 +4,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { ListItem, Icon } from "../../components";
+import { useConnState } from "../../hooks/useConnState";
+import { ListItem, Icon, OfflineBanner } from "../../components";
 
 function getMostCriticalReading(s: { temp: number; hum: number; co2: number }): { value: string; unit: string } {
   const sensors = [
@@ -40,6 +41,8 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { silos, alerts, profile, notification, clearNotification } = useAppData();
+  const conn = useConnState();
+  const offline = conn.state !== "online";
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "del" } | null>(null);
 
@@ -82,6 +85,8 @@ export default function DashboardScreen() {
         <StatChip label="Alertas" value={active.length} valueColor={active.length ? colors.statusCritical : colors.statusOk} styles={styles} />
         <StatChip label="Estado" value={estadoLabel} valueColor={estadoColor} styles={styles} />
       </View>
+
+      {offline && <OfflineBanner minutesOffline={conn.minutesOffline} />}
 
       <TouchableOpacity style={styles.weeklyBanner} activeOpacity={0.7}>
         <Icon name="clipboard" size={16} color={colors.actionPrimary} />
@@ -126,7 +131,7 @@ export default function DashboardScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionLabel}>TUS SILOS</Text>
-        <View style={styles.siloList}>
+        <View style={[styles.siloList, offline && { opacity: 0.6 }]}>
           {silos.map((silo) => {
             const reading = getMostCriticalReading(silo);
             return (
@@ -144,7 +149,12 @@ export default function DashboardScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => router.push("/agregar-silo" as any)}>
+      <TouchableOpacity
+        style={[styles.fab, offline && { opacity: 0.5 }]}
+        activeOpacity={0.85}
+        disabled={offline}
+        onPress={() => router.push("/agregar-silo" as any)}
+      >
         <Text style={styles.fabPlus}>+</Text>
       </TouchableOpacity>
     </View>

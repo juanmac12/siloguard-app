@@ -6,6 +6,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Modal as RNModal, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { Icon } from './Icon';
 
 type Size = 'sm' | 'md' | 'lg';
@@ -30,11 +31,12 @@ export function Modal({
   preventClose?: boolean;
 }) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: open ? 1 : 0, duration: 180, useNativeDriver: true }).start();
-  }, [open, anim]);
+    Animated.timing(anim, { toValue: open ? 1 : 0, duration: reducedMotion ? 0 : 180, useNativeDriver: true }).start();
+  }, [open, anim, reducedMotion]);
 
   if (!open) return null;
 

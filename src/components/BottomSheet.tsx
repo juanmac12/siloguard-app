@@ -7,6 +7,7 @@ import { Animated, Modal as RNModal, Pressable, StyleSheet, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { Icon } from './Icon';
 
 export function BottomSheet({
@@ -26,11 +27,12 @@ export function BottomSheet({
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: open ? 1 : 0, duration: 220, useNativeDriver: true }).start();
-  }, [open, anim]);
+    Animated.timing(anim, { toValue: open ? 1 : 0, duration: reducedMotion ? 0 : 220, useNativeDriver: true }).start();
+  }, [open, anim, reducedMotion]);
 
   if (!open) return null;
 
