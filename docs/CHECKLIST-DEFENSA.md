@@ -63,7 +63,11 @@ Guía para mostrar **cada ítem de la rúbrica** (100 pts): qué mostrar y dónd
 | **6.1** Arquitectura (1) | Capas, stack y decisiones. | `ARQUITECTURA.md` + `backend/README.md`. |
 | **6.2** Instalación (1) | Pasos para levantar DB + API + app. | `backend/README.md` + sección "Cómo levantarlo" de `ARQUITECTURA.md`. |
 | **6.3** Docs API / pruebas (1) | Swagger en `/swagger` + **12 tests xUnit verdes**. | `dotnet test` en vivo (`backend/tests/SiloGuard.Tests`). |
-| **6.4** Repositorio (2) | Commits por feature, estructura clara, sin binarios ni secretos. | `git log --oneline`. |
+| **6.4** Repositorio (2) | Commits por feature, estructura clara, sin binarios ni secretos. **Git flow real**: `main` estable (conectado a la API) + rama `feat/design-handoff` con el rediseño visual en revisión, a integrar en la próxima iteración. | `git log --oneline` · `git branch -r`. |
+
+> ⚠️ **Presentar SIEMPRE desde `main`.** La rama `feat/design-handoff` usa datos mock
+> (sin API) — sirve como evidencia de trabajo en equipo, pero NO se demuestra la app
+> desde ahí: la rúbrica exige consumo real de la API y datos vivos en la DB.
 
 ---
 
