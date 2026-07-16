@@ -3,7 +3,9 @@
  * Muestra label, valor grande, unidad, y un icono con tono según estado.
  * Contenido centrado; label y value van a una sola línea (sin adjustsFontSizeToFit:
  * en Android esa prop puede reportar mal el alto medido del texto y solapar
- * el contenido siguiente).
+ * el contenido siguiente). valueRow evita alignItems:'baseline' (otro disparador
+ * conocido de colapso de altura en Android con hijos de fontSize distinto) y la
+ * card tiene minHeight como garantía dura contra ese colapso.
  */
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
@@ -66,6 +68,7 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     card: {
       flex: 1,
+      minHeight: 92,
       backgroundColor: c.surfaceCard,
       borderRadius: Radius.lg,
       borderWidth: 1,
@@ -73,6 +76,7 @@ const makeStyles = (c: ThemeColors) =>
       padding: Spacing.md,
       gap: Spacing.sm,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     header: {
       flexDirection: 'row',
@@ -91,21 +95,26 @@ const makeStyles = (c: ThemeColors) =>
     },
     valueRow: {
       flexDirection: 'row',
-      alignItems: 'baseline',
+      alignItems: 'flex-end',
       justifyContent: 'center',
       gap: 4,
     },
     value: {
       color: c.textPrimary,
       fontSize: 28,
+      lineHeight: 32,
       fontWeight: FontWeight.bold,
       fontFamily: fontFamilyForWeight(FontWeight.bold),
       letterSpacing: -0.5,
+      includeFontPadding: false,
     },
     unit: {
       color: c.textMuted,
       fontSize: 12,
+      lineHeight: 16,
+      marginBottom: 3,
       fontFamily: fontFamilyForWeight(FontWeight.regular),
+      includeFontPadding: false,
     },
   });
 
