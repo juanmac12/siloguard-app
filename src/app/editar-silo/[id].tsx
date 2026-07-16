@@ -5,7 +5,7 @@ import { ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../cons
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { useToast } from "../../components/Toast";
-import { Icon, Button, BottomSheet } from "../../components";
+import { Icon, Button, BottomSheet, DateField } from "../../components";
 
 const GRAIN_TYPES = ["Soja", "Maíz", "Trigo", "Girasol", "Sorgo", "Cebada", "Otro"];
 const STORAGE_TYPES = ["Silo fijo", "Silobolsa"];
@@ -197,15 +197,7 @@ export default function EditarSiloScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: errors.acopio ? colors.statusCritical : colors.textSecondary }]}>Fecha de acopio</Text>
-            <TextInput
-              value={form.acopio}
-              onChangeText={set("acopio")}
-              placeholder="Ej: 15 mar 2024"
-              placeholderTextColor={colors.textMuted}
-              style={[styles.input, { backgroundColor: colors.surfaceInput, borderColor: errors.acopio ? colors.statusCritical : colors.borderDefault, color: colors.textPrimary }]}
-            />
-            {errors.acopio ? <Text style={[styles.errorText, { color: colors.statusCritical }]}>{errors.acopio}</Text> : null}
+            <DateField label="Fecha de acopio" value={form.acopio} onChange={set("acopio")} error={errors.acopio} maximumDate={new Date()} />
           </View>
 
           <Button variant="primary" fullWidth loading={saving} disabled={!isDirty} onPress={save} style={{ marginBottom: 24 }}>
