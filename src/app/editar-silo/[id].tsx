@@ -205,7 +205,6 @@ export default function EditarSiloScreen() {
           </Button>
 
           <View style={[styles.deleteSeparator, { borderTopColor: colors.borderDefault }]} />
-          <Text style={[styles.dangerLabel, { color: colors.textMuted }]}>ZONA DE PELIGRO</Text>
           <TouchableOpacity onPress={() => setDeleteSheet(true)} style={[styles.deleteFullBtn, { borderColor: colors.statusCritical }]}>
             <Icon name="trash" size={16} color={colors.statusCritical} />
             <Text style={[styles.deleteBtnText, { color: colors.statusCritical }]}>Eliminar silo</Text>
@@ -255,8 +254,7 @@ const makeStyles = (c: ThemeColors) =>
     storageChipText: { fontSize: 14, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
 
     deleteSeparator: { borderTopWidth: 1, marginBottom: 12 },
-    dangerLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.6, marginBottom: 10 },
-    deleteFullBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderRadius: Radius.md, paddingVertical: 14, marginBottom: 8 },
+    deleteFullBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderRadius: Radius.md, paddingVertical: 16, marginBottom: 8 },
     deleteBtnText: { fontSize: 15, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
 
     deleteSheetBody: { fontSize: 14, lineHeight: 21, color: c.textSecondary, fontFamily: fontFamilyForWeight(FontWeight.regular) },

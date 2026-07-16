@@ -88,12 +88,6 @@ export default function DashboardScreen() {
 
       {offline && <OfflineBanner minutesOffline={conn.minutesOffline} />}
 
-      <TouchableOpacity style={styles.weeklyBanner} activeOpacity={0.7}>
-        <Icon name="clipboard" size={16} color={colors.actionPrimary} />
-        <Text style={styles.weeklyText}>Resumen semanal disponible</Text>
-        <Icon name="chevron-right" size={16} color={colors.textSecondary} />
-      </TouchableOpacity>
-
       {active.length > 0 && (
         <TouchableOpacity
           onPress={() => router.push("/(tabs)/alertas")}
@@ -239,27 +233,6 @@ const makeStyles = (c: ThemeColors) =>
       textTransform: "uppercase",
       marginTop: 4,
       fontFamily: fontFamilyForWeight(FontWeight.regular),
-    },
-
-    weeklyBanner: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      marginHorizontal: Spacing.md,
-      marginBottom: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 11,
-      backgroundColor: "rgba(34,197,94,0.08)",
-      borderWidth: 1,
-      borderColor: "rgba(34,197,94,0.2)",
-      borderRadius: Radius.lg,
-    },
-    weeklyText: {
-      flex: 1,
-      color: c.textPrimary,
-      fontSize: 13,
-      fontWeight: FontWeight.medium,
-      fontFamily: fontFamilyForWeight(FontWeight.medium),
     },
 
     alertBanner: {

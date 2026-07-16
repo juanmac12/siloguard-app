@@ -59,18 +59,6 @@ export default function NotificacionesScreen() {
           />
         </SCard>
 
-        <SCard label="RESUMEN SEMANAL" colors={colors}>
-          <NRow
-            icon="clock"
-            label="Recibir resumen semanal"
-            desc="Todos los lunes a las 8:00 AM"
-            checked={notificationSettings.weeklySummary}
-            onChange={(v) => updateNotificationSettings({ weeklySummary: v })}
-            last
-            colors={colors}
-          />
-        </SCard>
-
         <SCard label="SILENCIO NOCTURNO" colors={colors}>
           <NRow
             icon="moon"
