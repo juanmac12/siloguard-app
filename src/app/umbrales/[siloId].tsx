@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData, SiloThresholds, ThresholdPair } from "../../contexts/AppDataContext";
@@ -144,6 +145,7 @@ function MetricCard({ metric, thresholds, reading, recommended, grain, onChange,
 export default function UmbralesSiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { silos, thresholdsFor, recommendedFor, setSiloThresholds, applyThresholdsToOthers } = useAppData();
   const toast = useToast();
   const styles2 = useMemo(() => makeStyles(colors), [colors]);
@@ -294,7 +296,7 @@ export default function UmbralesSiloScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
+      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg, paddingBottom: Spacing.md + insets.bottom }]}>
         <Button variant="primary" fullWidth loading={saving} disabled={!hasChanges} onPress={save}>
           Guardar
         </Button>

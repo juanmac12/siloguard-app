@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -38,6 +39,7 @@ function Avatar({ name, size = 80 }: { name: string; size?: number }) {
 export default function EditarPerfilScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { profile, updateProfile } = useAppData();
   const toast = useToast();
   const styles2 = makeStyles(colors);
@@ -97,7 +99,7 @@ export default function EditarPerfilScreen() {
         <Input label="Hectáreas" value={f.farmHa} onChangeText={set("farmHa")} keyboardType="numeric" />
       </ScrollView>
 
-      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
+      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg, paddingBottom: Spacing.md + insets.bottom }]}>
         <Button variant="primary" fullWidth loading={saving} onPress={save}>
           Guardar cambios
         </Button>

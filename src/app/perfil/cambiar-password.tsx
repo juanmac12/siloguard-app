@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -32,6 +33,7 @@ function PasswordField({ label, value, onChangeText, error, colors }: {
 export default function CambiarPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { changePassword } = useAppData();
   const toast = useToast();
 
@@ -107,7 +109,7 @@ export default function CambiarPasswordScreen() {
         </Text>
       </ScrollView>
 
-      <View style={[styles.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
+      <View style={[styles.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg, paddingBottom: Spacing.md + insets.bottom }]}>
         <Button variant="primary" fullWidth loading={saving} onPress={save}>
           Cambiar contraseña
         </Button>

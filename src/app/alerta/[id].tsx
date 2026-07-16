@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -29,6 +30,7 @@ const SENSOR_LABEL: Record<string, string> = { temp: "Temp.", humidity: "Humedad
 export default function AlertaDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { alerts, resolveAlert } = useAppData();
   const conn = useConnState();
   const offline = conn.state !== "online";
@@ -150,7 +152,7 @@ export default function AlertaDetailScreen() {
       </ScrollView>
 
       {!isResolved && (
-        <View style={[styles.actionBar, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
+        <View style={[styles.actionBar, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg, paddingBottom: 16 + insets.bottom }]}>
           <Button
             variant="secondary"
             fullWidth
