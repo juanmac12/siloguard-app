@@ -1,7 +1,9 @@
 /**
  * SensorStat — tile de lectura de sensor (CO₂ / temperatura / humedad).
  * Muestra label, valor grande, unidad, y un icono con tono según estado.
- * Contenido centrado; el label nunca se parte (una sola línea, se achica si no entra).
+ * Contenido centrado; label y value van a una sola línea (sin adjustsFontSizeToFit:
+ * en Android esa prop puede reportar mal el alto medido del texto y solapar
+ * el contenido siguiente).
  */
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
@@ -46,12 +48,12 @@ export function SensorStat({
     <View style={[styles.card, style]}>
       <View style={styles.header}>
         <Icon name={k.icon} size={16} color={color} />
-        <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
+        <Text style={styles.label} numberOfLines={1}>
           {k.label.toUpperCase()}
         </Text>
       </View>
       <View style={styles.valueRow}>
-        <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
+        <Text style={styles.value} numberOfLines={1}>
           {value}
         </Text>
         <Text style={styles.unit}>{k.unit}</Text>
