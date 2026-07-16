@@ -5,7 +5,10 @@
  * en Android esa prop puede reportar mal el alto medido del texto y solapar
  * el contenido siguiente). valueRow evita alignItems:'baseline' (otro disparador
  * conocido de colapso de altura en Android con hijos de fontSize distinto) y la
- * card tiene minHeight como garantía dura contra ese colapso.
+ * card tiene un height fijo (no minHeight: en Android un minHeight aplicado
+ * post-medición no siempre dispara un re-layout del padre, y la fila de
+ * sensores queda con la altura vieja mientras la card pinta más alta —
+ * exactamente el corte que reportó el usuario en la 3ª ronda de testing).
  */
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
@@ -68,7 +71,7 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     card: {
       flex: 1,
-      minHeight: 92,
+      height: 92,
       backgroundColor: c.surfaceCard,
       borderRadius: Radius.lg,
       borderWidth: 1,

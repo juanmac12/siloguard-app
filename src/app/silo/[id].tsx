@@ -176,19 +176,19 @@ export default function SiloScreen() {
 
       {/* Sensor grid */}
       <View style={styles.sensorRow}>
-        <Pressable style={{ flex: 1 }} onPress={() => goHistorial("temp")}>
+        <Pressable style={{ flex: 1, height: 92 }} onPress={() => goHistorial("temp")}>
           <SensorStat kind="temp" value={silo.temp} tone={tempTone} />
         </Pressable>
-        <Pressable style={{ flex: 1 }} onPress={() => goHistorial("hum")}>
+        <Pressable style={{ flex: 1, height: 92 }} onPress={() => goHistorial("hum")}>
           <SensorStat kind="humidity" value={silo.hum} tone={humTone} />
         </Pressable>
-        <Pressable style={{ flex: 1 }} onPress={() => goHistorial("co2")}>
+        <Pressable style={{ flex: 1, height: 92 }} onPress={() => goHistorial("co2")}>
           <SensorStat kind="co2" value={silo.co2} tone={co2Tone} />
         </Pressable>
       </View>
 
       {/* Tabs */}
-      <View style={{ paddingHorizontal: Spacing.md }}>
+      <View style={{ paddingHorizontal: Spacing.md, marginTop: Spacing.sm }}>
         <Tabs
           variant="underline"
           activeId={tab}
