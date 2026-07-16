@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -30,6 +31,7 @@ function ShareOption({ icon, label, sub, onPress, colors }: {
 export default function LoteDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { lotes, silos } = useAppData();
   const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -73,7 +75,7 @@ export default function LoteDetailScreen() {
         <Certificate lote={lote} silo={silo} onQRTap={() => setShowQR(true)} />
       </ScrollView>
 
-      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
+      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg, paddingBottom: Spacing.md + insets.bottom }]}>
         <Button variant="primary" fullWidth onPress={() => setShowShare(true)}>Compartir certificado</Button>
       </View>
 

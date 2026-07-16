@@ -213,7 +213,7 @@ function defaultThresholds(grain: string): SiloThresholds {
   };
 }
 
-/** Preferencias que el backend sí persiste. Las demás (`push`, `weeklySummary`) son locales. */
+/** Preferencias que el backend sí persiste. `push` es local. */
 const BACKEND_PREF_KEYS: (keyof NotificationSettings)[] = [
   "warning",
   "nightSilence",
@@ -469,7 +469,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const updateNotificationSettings = (payload: Partial<NotificationSettings>) => {
     const next = { ...notificationSettings, ...payload };
     setNotificationSettings(next);
-    // `push` y `weeklySummary` no tienen backend: se quedan en memoria.
+    // `push` no tiene backend: se queda en memoria.
     if (!BACKEND_PREF_KEYS.some((k) => k in payload)) return;
     perfilApi.updatePreferencias(toPrefs(next)).catch(() => {
       setNotificationSettings(notificationSettings);

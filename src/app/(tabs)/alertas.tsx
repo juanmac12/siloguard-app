@@ -79,7 +79,9 @@ export default function AlertasScreen() {
                 silo={alerta.silo}
                 time={alerta.time}
                 description={alerta.desc}
-                onPress={alerta.status === "active" ? () => router.push(`/alerta/${alerta.id}` as any) : undefined}
+                estimate={alerta.estimate}
+                action={alerta.action}
+                onPress={() => router.push(`/alerta/${alerta.id}` as any)}
               />
             ))}
           </View>

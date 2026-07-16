@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -157,6 +158,7 @@ function VariablePanel({ variable, silo, data, thresholds, timeRangeHours, color
 export default function HistorialScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { silos, thresholdsFor } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id, variable } = useLocalSearchParams<{ id: string; variable?: string }>();
@@ -217,7 +219,7 @@ export default function HistorialScreen() {
         <Tabs variant="pill" fullWidth activeId={range} onChange={setRange} items={RANGES.map((r) => ({ id: r.id, label: r.label }))} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <View style={[styles.hint, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
           <Icon name="info" size={14} color={colors.textMuted} />
           <Text style={[styles.hintText, { color: colors.textMuted }]}>

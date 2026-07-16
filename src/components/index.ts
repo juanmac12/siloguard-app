@@ -4,6 +4,7 @@
  */
 export { Button } from './Button';
 export { Input } from './Input';
+export { DateField, formatDateEs, parseDateEs } from './DateField';
 export { Icon, ICON_NAMES } from './Icon';
 export type { IconName } from './Icon';
 export { StatusBadge, StatusDot } from './StatusBadge';

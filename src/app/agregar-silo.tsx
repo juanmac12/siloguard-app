@@ -4,12 +4,13 @@ import {
   StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../constants/Theme";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAppData } from "../contexts/AppDataContext";
 import { useConnState } from "../hooks/useConnState";
 import { useToast } from "../components/Toast";
-import { Icon, EmptyState } from "../components";
+import { Icon, EmptyState, DateField, formatDateEs } from "../components";
 
 const GRAIN_TYPES = ["Soja", "Maíz", "Trigo", "Girasol", "Sorgo", "Cebada", "Otro"];
 const STORAGE_TYPES = ["Silo fijo", "Silobolsa"];
@@ -36,6 +37,7 @@ interface FormErrors {
 export default function AgregarSiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { addSilo } = useAppData();
   const toast = useToast();
   const conn = useConnState();
@@ -44,11 +46,13 @@ export default function AgregarSiloScreen() {
 
   const [step, setStep] = useState<Step>("qr");
   const [selectedWifi, setSelectedWifi] = useState("");
+  const [wifiPassword, setWifiPassword] = useState("");
+  const [showWifiPassword, setShowWifiPassword] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({
-    name: "", grain: "Soja", customGrain: "", storage: "Silo fijo", tons: "", acopio: "",
+    name: "", grain: "Soja", customGrain: "", storage: "Silo fijo", tons: "", acopio: formatDateEs(new Date()),
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -149,7 +153,7 @@ export default function AgregarSiloScreen() {
 
         {/* ── Step 1: QR ── */}
         {step === "qr" && (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}>
             <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Conectar dispositivo</Text>
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
               Apuntá la cámara al código QR del módulo SiloGuard para identificarlo.
@@ -195,7 +199,7 @@ export default function AgregarSiloScreen() {
 
         {/* ── Step 2: WiFi ── */}
         {step === "wifi" && (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}>
             <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Seleccioná tu red WiFi</Text>
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
               El módulo necesita conectarse a tu red local para enviar datos.
@@ -216,19 +220,37 @@ export default function AgregarSiloScreen() {
                 </Pressable>
               ))}
             </View>
+            {selectedWifi ? (
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Contraseña de la red</Text>
+                <View style={[styles.input, styles.passwordRow, { backgroundColor: colors.surfaceInput, borderColor: colors.borderDefault }]}>
+                  <TextInput
+                    value={wifiPassword}
+                    onChangeText={setWifiPassword}
+                    placeholder="Contraseña WiFi"
+                    placeholderTextColor={colors.textSecondary}
+                    secureTextEntry={!showWifiPassword}
+                    style={[styles.passwordInput, { color: colors.textPrimary }]}
+                  />
+                  <Pressable onPress={() => setShowWifiPassword((s) => !s)} hitSlop={8}>
+                    <Icon name={showWifiPassword ? "eye-off" : "eye"} size={18} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
             <TouchableOpacity
-              onPress={() => { if (selectedWifi) setStep("form"); }}
-              disabled={!selectedWifi}
-              style={[styles.primaryBtn, { marginTop: 20, backgroundColor: selectedWifi ? colors.actionPrimary : colors.surfaceInput }]}
+              onPress={() => { if (selectedWifi && wifiPassword) setStep("form"); }}
+              disabled={!selectedWifi || !wifiPassword}
+              style={[styles.primaryBtn, { marginTop: 8, backgroundColor: selectedWifi && wifiPassword ? colors.actionPrimary : colors.surfaceInput }]}
             >
-              <Text style={[styles.primaryBtnText, { color: selectedWifi ? colors.actionPrimaryText : colors.textSecondary }]}>Continuar</Text>
+              <Text style={[styles.primaryBtnText, { color: selectedWifi && wifiPassword ? colors.actionPrimaryText : colors.textSecondary }]}>Continuar</Text>
             </TouchableOpacity>
           </ScrollView>
         )}
 
         {/* ── Step 3: Form ── */}
         {step === "form" && (
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
             <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Datos del silo</Text>
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>Completá la información para identificar este silo en tu cuenta.</Text>
 
@@ -303,15 +325,7 @@ export default function AgregarSiloScreen() {
 
             {/* Fecha de acopio */}
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: errors.acopio ? colors.statusCritical : colors.textSecondary }]}>Fecha de acopio</Text>
-              <TextInput
-                value={form.acopio}
-                onChangeText={set("acopio")}
-                placeholder="Ej: 15 mar 2024"
-                placeholderTextColor={colors.textSecondary}
-                style={[styles.input, { backgroundColor: colors.surfaceInput, borderColor: errors.acopio ? colors.statusCritical : colors.borderDefault, color: colors.textPrimary }]}
-              />
-              {errors.acopio ? <Text style={[styles.errorText, { color: colors.statusCritical }]}>{errors.acopio}</Text> : null}
+              <DateField label="Fecha de acopio" value={form.acopio} onChange={set("acopio")} error={errors.acopio} maximumDate={new Date()} />
             </View>
 
             <TouchableOpacity
@@ -364,6 +378,8 @@ const makeStyles = (c: ThemeColors) =>
 
     wifiRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: Radius.md, borderWidth: 1 },
     wifiName: { flex: 1, fontSize: 14, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    passwordRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    passwordInput: { flex: 1, fontSize: 15, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
     primaryBtn: {
       flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,

@@ -12,9 +12,9 @@
  *   600/800), no por grano — así que los valores que sugiere esta pantalla y
  *   los que aplica un "restaurar recomendados" del servidor pueden no coincidir.
  * - `SEED_NOTIFICATIONS`: valores iniciales hasta que responde
- *   GET /api/perfil/notificaciones. De los 7 campos el backend persiste 4;
- *   `push` y `weeklySummary` viven solo en memoria, y las críticas no se
- *   configuran (siempre se notifican).
+ *   GET /api/perfil/notificaciones. De los 6 campos el backend persiste 4;
+ *   `push` vive solo en memoria, y las críticas no se configuran (siempre
+ *   se notifican).
  */
 
 export type Grain = "Soja" | "Maíz" | "Trigo" | "Girasol";
@@ -32,7 +32,6 @@ export interface NotificationSettings {
   push: boolean;
   critical: boolean;
   warning: boolean;
-  weeklySummary: boolean;
   nightSilence: boolean;
   nightStart: string;
   nightEnd: string;
@@ -53,7 +52,6 @@ export const SEED_NOTIFICATIONS: NotificationSettings = {
   push: true,
   critical: true,
   warning: true,
-  weeklySummary: true,
   nightSilence: false,
   nightStart: "22:00",
   nightEnd: "07:00",

@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -34,6 +35,7 @@ function SCard({ label, children, colors }: { label: string; children: React.Rea
 export default function NotificacionesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { notificationSettings, updateNotificationSettings } = useAppData();
 
   return (
@@ -45,7 +47,7 @@ export default function NotificacionesScreen() {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Notificaciones</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Spacing.xl + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <SCard label="ALERTAS" colors={colors}>
           <NRow icon="alert-triangle" label="Alertas críticas" desc="Siempre activas — Requerido" checked disabled onChange={() => {}} colors={colors} />
           <NRow
@@ -54,18 +56,6 @@ export default function NotificacionesScreen() {
             desc="Lecturas por encima del umbral"
             checked={notificationSettings.warning}
             onChange={(v) => updateNotificationSettings({ warning: v })}
-            last
-            colors={colors}
-          />
-        </SCard>
-
-        <SCard label="RESUMEN SEMANAL" colors={colors}>
-          <NRow
-            icon="clock"
-            label="Recibir resumen semanal"
-            desc="Todos los lunes a las 8:00 AM"
-            checked={notificationSettings.weeklySummary}
-            onChange={(v) => updateNotificationSettings({ weeklySummary: v })}
             last
             colors={colors}
           />

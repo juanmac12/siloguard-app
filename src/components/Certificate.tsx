@@ -63,7 +63,7 @@ export function Certificate({ lote, silo, onQRTap }: { lote: Lote; silo?: Silo; 
         </View>
         <Text style={styles.headerLabel}>CERTIFICADO DE CALIDAD</Text>
         <Text style={styles.folio}>N° {lote.codigo}</Text>
-        <StatusBadge tone={isMon ? 'ok' : 'resolved'} label={isMon ? 'En monitoreo' : 'Finalizado'} style={{ marginTop: 2 }} />
+        <StatusBadge tone={isMon ? 'ok' : 'resolved'} label={isMon ? 'En monitoreo' : 'Finalizado'} style={{ marginTop: 2, alignSelf: 'center' }} />
       </View>
 
       <View style={styles.scoreWrap}>

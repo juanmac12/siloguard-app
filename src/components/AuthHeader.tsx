@@ -4,6 +4,7 @@
  */
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icon } from './Icon';
@@ -18,10 +19,11 @@ export function AuthHeader({
   onBack?: () => void;
 }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { paddingTop: insets.top }]}>
       {showBack ? (
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8} accessibilityLabel="Volver">
           <Icon name="chevron-left" size={22} color={colors.textPrimary} />
@@ -39,7 +41,7 @@ export function AuthHeader({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     bar: {
-      height: 54,
+      minHeight: 54,
       paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',

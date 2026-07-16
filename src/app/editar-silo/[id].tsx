@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { useToast } from "../../components/Toast";
-import { Icon, Button, BottomSheet } from "../../components";
+import { Icon, Button, BottomSheet, DateField } from "../../components";
 
 const GRAIN_TYPES = ["Soja", "Maíz", "Trigo", "Girasol", "Sorgo", "Cebada", "Otro"];
 const STORAGE_TYPES = ["Silo fijo", "Silobolsa"];
@@ -29,6 +30,7 @@ interface FormErrors {
 export default function EditarSiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { silos, updateSilo, deleteSilo } = useAppData();
   const toast = useToast();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -124,7 +126,7 @@ export default function EditarSiloScreen() {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: errors.name ? colors.statusCritical : colors.textSecondary }]}>Nombre del silo</Text>
             <TextInput
@@ -197,15 +199,7 @@ export default function EditarSiloScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: errors.acopio ? colors.statusCritical : colors.textSecondary }]}>Fecha de acopio</Text>
-            <TextInput
-              value={form.acopio}
-              onChangeText={set("acopio")}
-              placeholder="Ej: 15 mar 2024"
-              placeholderTextColor={colors.textMuted}
-              style={[styles.input, { backgroundColor: colors.surfaceInput, borderColor: errors.acopio ? colors.statusCritical : colors.borderDefault, color: colors.textPrimary }]}
-            />
-            {errors.acopio ? <Text style={[styles.errorText, { color: colors.statusCritical }]}>{errors.acopio}</Text> : null}
+            <DateField label="Fecha de acopio" value={form.acopio} onChange={set("acopio")} error={errors.acopio} maximumDate={new Date()} />
           </View>
 
           <Button variant="primary" fullWidth loading={saving} disabled={!isDirty} onPress={save} style={{ marginBottom: 24 }}>
@@ -213,7 +207,6 @@ export default function EditarSiloScreen() {
           </Button>
 
           <View style={[styles.deleteSeparator, { borderTopColor: colors.borderDefault }]} />
-          <Text style={[styles.dangerLabel, { color: colors.textMuted }]}>ZONA DE PELIGRO</Text>
           <TouchableOpacity onPress={() => setDeleteSheet(true)} style={[styles.deleteFullBtn, { borderColor: colors.statusCritical }]}>
             <Icon name="trash" size={16} color={colors.statusCritical} />
             <Text style={[styles.deleteBtnText, { color: colors.statusCritical }]}>Eliminar silo</Text>
@@ -263,8 +256,7 @@ const makeStyles = (c: ThemeColors) =>
     storageChipText: { fontSize: 14, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
 
     deleteSeparator: { borderTopWidth: 1, marginBottom: 12 },
-    dangerLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.6, marginBottom: 10 },
-    deleteFullBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderRadius: Radius.md, paddingVertical: 14, marginBottom: 8 },
+    deleteFullBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderRadius: Radius.md, paddingVertical: 16, marginBottom: 8 },
     deleteBtnText: { fontSize: 15, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
 
     deleteSheetBody: { fontSize: 14, lineHeight: 21, color: c.textSecondary, fontFamily: fontFamilyForWeight(FontWeight.regular) },

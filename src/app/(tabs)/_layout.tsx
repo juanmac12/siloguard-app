@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { Icon } from "../../components";
@@ -6,6 +7,7 @@ import { FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { alerts } = useAppData();
   const activeAlerts = alerts.filter((a) => a.status === "active").length;
 
@@ -17,8 +19,8 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 76,
-          paddingBottom: 12,
+          height: 76 + insets.bottom,
+          paddingBottom: 12 + insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.primary,

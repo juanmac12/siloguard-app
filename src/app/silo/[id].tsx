@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -17,6 +18,8 @@ import {
   Sparkline,
   LoteStatusCard,
   DeviceOfflineBanner,
+  BottomSheet,
+  Button,
 } from "../../components";
 
 const LBL_STYLE = {
@@ -34,6 +37,12 @@ const FORECAST = [
   { label: "Pasado", temp: "22°C", icon: "🌧️", risk: "Bajo", riskColor: "ok" as const },
 ];
 
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function todayStr(): string {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, "0")} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function toneFor(value: number, warn: number, crit: number): "ok" | "warn" | "critical" {
   return value >= crit ? "critical" : value >= warn ? "warn" : "ok";
 }
@@ -41,6 +50,7 @@ function toneFor(value: number, warn: number, crit: number): "ok" | "warn" | "cr
 export default function SiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { silos, alerts, lotes, iniciarLote, finalizarLote, thresholdsFor } = useAppData();
   const toast = useToast();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -48,6 +58,8 @@ export default function SiloScreen() {
   const [tab, setTab] = useState<"info" | "alertas">("info");
   const [menuOpen, setMenuOpen] = useState(false);
   const [loteLoading, setLoteLoading] = useState(false);
+  const [iniciarSheetOpen, setIniciarSheetOpen] = useState(false);
+  const [loteName, setLoteName] = useState("");
 
   const silo = silos.find((s) => s.id === Number(id));
   const device = useDeviceState(silo?.lastSignalAt);
@@ -78,12 +90,21 @@ export default function SiloScreen() {
 
   const goHistorial = (variable: "temp" | "hum" | "co2") => router.push(`/historial/${silo.id}?variable=${variable}` as any);
 
-  const onIniciarLote = async () => {
-    if (deviceOffline) return;
+  const openIniciarSheet = () => {
     setMenuOpen(false);
+    setLoteName(`Lote ${silo.grain} ${silo.name.replace(/^Silo\s*/i, "")}`.trim());
+    setIniciarSheetOpen(true);
+  };
+
+  const onConfirmIniciarLote = async () => {
     setLoteLoading(true);
     try {
+      // El backend deriva el nombre del lote (misma fórmula que loteName acá
+      // arriba) y POST /silos/{id}/lotes no acepta body: el campo es un
+      // preview editable en la UI, pero el valor final siempre lo pone el
+      // servidor. Igual que las lanzas, es un gap de esta feature nueva.
       await iniciarLote(silo.id);
+      setIniciarSheetOpen(false);
       toast.addToast({ tone: "ok", title: "Lote iniciado", message: "El silo está en monitoreo." });
     } finally {
       setLoteLoading(false);
@@ -91,7 +112,7 @@ export default function SiloScreen() {
   };
 
   const onFinalizarLote = async () => {
-    if (!activeLote || deviceOffline) return;
+    if (!activeLote) return;
     setMenuOpen(false);
     setLoteLoading(true);
     try {
@@ -131,12 +152,12 @@ export default function SiloScreen() {
                   <Text style={[styles.menuText, { color: colors.textPrimary }]}>Configurar umbrales</Text>
                 </Pressable>
                 {activeLote ? (
-                  <Pressable onPress={onFinalizarLote} disabled={deviceOffline} style={[styles.menuItem, { borderBottomColor: colors.borderDefault, opacity: deviceOffline ? 0.45 : 1 }]}>
+                  <Pressable onPress={onFinalizarLote} style={[styles.menuItem, { borderBottomColor: colors.borderDefault }]}>
                     <Icon name="check-circle" size={16} color={colors.actionPrimary} />
                     <Text style={[styles.menuText, { color: colors.textPrimary }]}>Finalizar lote</Text>
                   </Pressable>
                 ) : (
-                  <Pressable onPress={onIniciarLote} disabled={deviceOffline} style={[styles.menuItem, { borderBottomColor: colors.borderDefault, opacity: deviceOffline ? 0.45 : 1 }]}>
+                  <Pressable onPress={openIniciarSheet} style={[styles.menuItem, { borderBottomColor: colors.borderDefault }]}>
                     <Icon name="plus-circle" size={16} color={colors.textSecondary} />
                     <Text style={[styles.menuText, { color: colors.textPrimary }]}>Iniciar lote</Text>
                   </Pressable>
@@ -155,7 +176,7 @@ export default function SiloScreen() {
         <View style={{ paddingTop: 12 }}>
           <DeviceOfflineBanner
             minutesOffline={device.minutesSinceSignal}
-            onContactSupport={() => router.push((siloAlerts[0] ? `/alerta/${siloAlerts[0].id}` : "/contacto-tecnico") as any)}
+            onContactSupport={() => router.push("/contacto-tecnico" as any)}
           />
         </View>
       )}
@@ -163,27 +184,27 @@ export default function SiloScreen() {
       <View style={{ paddingTop: deviceOffline ? 4 : 12 }}>
         <LoteStatusCard
           lote={activeLote}
-          disabled={deviceOffline || loteLoading}
-          onIniciar={onIniciarLote}
+          disabled={loteLoading}
+          onIniciar={openIniciarSheet}
           onVerPasaporte={() => activeLote && router.push(`/lote/${activeLote.id}` as any)}
         />
       </View>
 
       {/* Sensor grid */}
-      <View style={[styles.sensorRow, { opacity: deviceOffline ? 0.55 : 1 }]} pointerEvents={deviceOffline ? "none" : "auto"}>
-        <Pressable style={{ flex: 1 }} onPress={() => goHistorial("temp")}>
+      <View style={styles.sensorRow}>
+        <Pressable style={{ flex: 1, height: 92 }} onPress={() => goHistorial("temp")}>
           <SensorStat kind="temp" value={silo.temp} tone={tempTone} />
         </Pressable>
-        <Pressable style={{ flex: 1 }} onPress={() => goHistorial("hum")}>
+        <Pressable style={{ flex: 1, height: 92 }} onPress={() => goHistorial("hum")}>
           <SensorStat kind="humidity" value={silo.hum} tone={humTone} />
         </Pressable>
-        <Pressable style={{ flex: 1 }} onPress={() => goHistorial("co2")}>
+        <Pressable style={{ flex: 1, height: 92 }} onPress={() => goHistorial("co2")}>
           <SensorStat kind="co2" value={silo.co2} tone={co2Tone} />
         </Pressable>
       </View>
 
       {/* Tabs */}
-      <View style={{ paddingHorizontal: Spacing.md }}>
+      <View style={{ paddingHorizontal: Spacing.md, marginTop: Spacing.sm }}>
         <Tabs
           variant="underline"
           activeId={tab}
@@ -195,7 +216,7 @@ export default function SiloScreen() {
         />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {tab === "info" ? (
           <>
             <Text style={[LBL_STYLE, { color: colors.textSecondary }]}>Información del grano</Text>
@@ -247,12 +268,52 @@ export default function SiloScreen() {
                 silo={a.silo}
                 time={a.time}
                 description={a.desc}
-                onPress={a.status === "active" ? () => router.push(`/alerta/${a.id}` as any) : undefined}
+                estimate={a.estimate}
+                action={a.action}
+                onPress={() => router.push(`/alerta/${a.id}` as any)}
               />
             ))}
           </View>
         )}
       </ScrollView>
+
+      <BottomSheet
+        open={iniciarSheetOpen}
+        onClose={() => setIniciarSheetOpen(false)}
+        title="Iniciar nuevo lote"
+        actions={[
+          <Button key="ok" variant="primary" fullWidth onPress={onConfirmIniciarLote} disabled={!loteName.trim()} loading={loteLoading}>
+            Iniciar monitoreo
+          </Button>,
+        ]}
+      >
+        <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
+          Se inicia el seguimiento de calidad de <Text style={{ fontWeight: FontWeight.semibold }}>{silo.name}</Text> con los datos
+          actuales del silo. Al finalizar, se emitirá el certificado.
+        </Text>
+        <View>
+          <Text style={[LBL_STYLE, { color: colors.textSecondary, marginBottom: 6 }]}>Nombre del lote</Text>
+          <TextInput
+            value={loteName}
+            onChangeText={setLoteName}
+            placeholder="Ej: Lote Soja Norte"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.sheetInput, { backgroundColor: colors.surfaceInput, borderColor: colors.actionPrimary, color: colors.textPrimary }]}
+          />
+        </View>
+        <View style={[styles.sheetInfoCard, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
+          <View style={[styles.sheetInfoRow, { borderBottomColor: colors.borderDefault }]}>
+            <Icon name="clipboard" size={15} color={colors.textSecondary} />
+            <Text style={[styles.sheetInfoLabel, { color: colors.textSecondary }]}>Grano y tonelaje</Text>
+            <Text style={[styles.sheetInfoValue, { color: colors.textPrimary }]}>{silo.grain} · {silo.tons} t</Text>
+          </View>
+          <View style={styles.sheetInfoRow}>
+            <Icon name="clock" size={15} color={colors.textSecondary} />
+            <Text style={[styles.sheetInfoLabel, { color: colors.textSecondary }]}>Inicio de monitoreo</Text>
+            <Text style={[styles.sheetInfoValue, { color: colors.textPrimary }]}>{todayStr()}</Text>
+          </View>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -315,4 +376,11 @@ const makeStyles = (c: ThemeColors) =>
 
     histLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderTopWidth: 1, paddingVertical: 12, marginTop: 12 },
     histLinkText: { fontSize: 13, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
+
+    sheetSub: { fontSize: 14, lineHeight: 20, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    sheetInput: { borderWidth: 1, borderRadius: Radius.md, padding: 12, fontSize: 15, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    sheetInfoCard: { borderRadius: Radius.lg, borderWidth: 1, paddingHorizontal: 12 },
+    sheetInfoRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1 },
+    sheetInfoLabel: { flex: 1, fontSize: 13, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    sheetInfoValue: { fontSize: 13, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
   });
