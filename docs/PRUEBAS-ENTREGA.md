@@ -234,8 +234,8 @@ curl -i -s http://localhost:5210/api/admin/usuarios -H "Authorization: Bearer $T
 
 | # | Prueba | Esperado |
 |---|---|---|
-| B8.1 | Inspeccionar la DB: 7 tablas de dominio + `__EFMigrationsHistory` | Estructura correcta |
-| B8.2 | `\d "UserRoles"` | PK compuesta + 2 FKs (N‑N real User↔Role) |
+| B8.1 | Inspeccionar la DB: 14 tablas de dominio + `__EFMigrationsHistory` | Estructura correcta |
+| B8.2 | `\d "UserRoles"` y `\d "LoteDestinatarios"` | PK compuesta + 2 FKs en ambas (las dos N‑N reales del modelo) |
 | B8.3 | `Users.PasswordHash` | Formato BCrypt `$2a$11$…` (nunca texto plano) |
 | B8.4 | Tabla `AuditLogs` | Se puebla sola al crear/editar/borrar silos y alertas (usuario + timestamp) |
 

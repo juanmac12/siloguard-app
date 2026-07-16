@@ -39,3 +39,13 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# .NET (backend)
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+
+# secretos — NUNCA commitear
+backend/**/firebase-service-account.json
+backend/.env
+.env

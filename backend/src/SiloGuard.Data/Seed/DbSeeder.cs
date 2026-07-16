@@ -10,6 +10,45 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(SiloGuardDbContext db)
     {
+        await SeedCoreAsync(db);
+
+        // Las tablas agregadas despues del seed original se siembran aparte y de forma
+        // idempotente, para que una base ya poblada tambien las reciba al actualizar.
+        await SeedExtrasAsync(db);
+
+        // Los datos demo envejecen: si el seed corrio hace dias, los rangos 24h/48h/7d
+        // del historial quedan vacios y el dashboard muestra "ultima lectura hace N dias".
+        // Este re-anclado corre en cada arranque (solo Development llama al seeder) y
+        // desplaza los timestamps para que la lectura mas reciente sea "ahora".
+        await RefreshDemoTimestampsAsync(db);
+    }
+
+    private static async Task RefreshDemoTimestampsAsync(SiloGuardDbContext db)
+    {
+        var now = DateTime.UtcNow;
+        var maxTs = await db.SensorReadings.MaxAsync(r => (DateTime?)r.Timestamp);
+        if (maxTs is null) return;
+
+        var drift = now - maxTs.Value;
+        if (drift < TimeSpan.FromHours(2)) return; // datos suficientemente frescos
+
+        // ExecuteUpdate corre como UPDATE directo en la DB (sin pasar por el change
+        // tracker), asi que no dispara auditoria ni pisa CreatedAt/UpdatedAt de negocio.
+        await db.SensorReadings
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Timestamp, r => r.Timestamp + drift));
+
+        await db.Silos
+            .Where(s => s.LastReadingAt != null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.LastReadingAt, x => x.LastReadingAt + drift));
+
+        await db.Alerts
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.CreatedAt, a => a.CreatedAt + drift)
+                .SetProperty(a => a.ResolvedAt, a => a.ResolvedAt + drift));
+    }
+
+    private static async Task SeedCoreAsync(SiloGuardDbContext db)
+    {
         if (await db.Users.AnyAsync()) return;
 
         var productor = new Role { Name = "Productor" };
@@ -197,5 +236,64 @@ public static class DbSeeder
         };
         db.Lotes.AddRange(lotes);
         await db.SaveChangesAsync();
+    }
+
+    private static async Task SeedExtrasAsync(SiloGuardDbContext db)
+    {
+        var now = DateTime.UtcNow;
+
+        // Tecnicos de contacto (pantalla "Contactar tecnico").
+        if (!await db.Tecnicos.AnyAsync())
+        {
+            db.Tecnicos.AddRange(
+                new Tecnico { Nombre = "Ing. Agr. Marcela Ríos", Telefono = "+54 9 362 455-1122", Horario = "Lun a Sáb, 7:00 a 20:00", Activo = true },
+                new Tecnico { Nombre = "Téc. Hernán Duarte", Telefono = "+54 9 362 455-3344", Horario = "Lun a Vie, 8:00 a 18:00", Activo = true }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        // Destinatarios del Pasaporte de Calidad (bancos / acopios / compradores).
+        if (!await db.Destinatarios.AnyAsync())
+        {
+            db.Destinatarios.AddRange(
+                new Destinatario { Nombre = "Banco Nación — Agro", Tipo = "banco", Contacto = "agro@bna.com.ar" },
+                new Destinatario { Nombre = "Acopio Cooperativa Charata", Tipo = "acopio", Contacto = "+54 9 3731 42-5566" },
+                new Destinatario { Nombre = "Molinos del Litoral S.A.", Tipo = "comprador", Contacto = "compras@molinoslitoral.com" },
+                new Destinatario { Nombre = "AgroExport Rosario", Tipo = "comprador", Contacto = "trading@agroexport.com" }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        // Umbrales personalizados de ejemplo para un silo (el resto usa los recomendados).
+        if (!await db.Umbrales.AnyAsync())
+        {
+            var siloSur = await db.Silos.FirstOrDefaultAsync(s => s.Name == "Silo Sur");
+            if (siloSur is not null)
+            {
+                db.Umbrales.AddRange(
+                    new Umbral { SiloId = siloSur.Id, Variable = "temp", Warn = 26m, Crit = 33m },
+                    new Umbral { SiloId = siloSur.Id, Variable = "hum", Warn = 15m, Crit = 19m },
+                    new Umbral { SiloId = siloSur.Id, Variable = "co2", Warn = 550m, Crit = 750m }
+                );
+                await db.SaveChangesAsync();
+            }
+        }
+
+        // Un pasaporte ya compartido (fila N-N de muestra) sobre el lote finalizado.
+        if (!await db.LoteDestinatarios.AnyAsync())
+        {
+            var loteFinalizado = await db.Lotes.FirstOrDefaultAsync(l => l.Status == "finalized");
+            var banco = await db.Destinatarios.FirstOrDefaultAsync(d => d.Tipo == "banco");
+            if (loteFinalizado is not null && banco is not null)
+            {
+                db.LoteDestinatarios.Add(new LoteDestinatario
+                {
+                    LoteId = loteFinalizado.Id,
+                    DestinatarioId = banco.Id,
+                    CompartidoAt = now.AddDays(-10),
+                });
+                await db.SaveChangesAsync();
+            }
+        }
     }
 }

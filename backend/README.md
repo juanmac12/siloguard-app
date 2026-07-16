@@ -26,10 +26,16 @@ backend/
 
 ## Modelo de datos
 
-7 tablas: `Users`, `Roles`, `UserRoles` (N-N real entre Users y Roles), `Silos` (1-N desde
-Users), `SensorReadings` (1-N desde Silos, historial paginable), `Alerts` (1-N desde Silos),
-`AuditLogs` (poblada automáticamente desde `SiloGuardDbContext.SaveChangesAsync` cada vez
-que se crea/modifica/borra un `Silo` o `Alert`).
+**14 tablas**: `Users`, `Roles`, `UserRoles` (N-N Users↔Roles), `Silos` (1-N desde Users),
+`SensorReadings` (1-N desde Silos, historial paginable), `Alerts` (1-N desde Silos),
+`Lotes` (Pasaporte de Calidad, 1-N desde Silos), `Umbrales` (detalle 1-N de Silos, con
+check `Warn < Crit` en DB), `Destinatarios` + `LoteDestinatarios` (**2ª N-N**, PK compuesta:
+con quién se compartió cada pasaporte), `Tecnicos` + `ConsultasSoporte` (contacto con
+técnico desde una alerta), `PreferenciasNotificaciones` (1-1 con Users) y `AuditLogs`
+(poblada automáticamente desde `SiloGuardDbContext.SaveChangesAsync` cada vez que se
+crea/modifica/borra un `Silo`, `Alert`, `Lote`, `Umbral` o `LoteDestinatario`).
+
+Tests: `dotnet test` (proyecto `tests/SiloGuard.Tests`, xUnit — seguridad y validators).
 
 Las contraseñas se guardan con BCrypt (`Users.PasswordHash`, formato `$2a$...` — el salt
 va embebido en el propio hash).
@@ -76,12 +82,24 @@ compu (ej. `http://192.168.0.9:5210/api`), no a `localhost`. El comando de arrib
 | PUT | `/api/silos/{id}` | JWT | Edita un silo |
 | DELETE | `/api/silos/{id}` | JWT | Elimina silo (cascada a lecturas y alertas) |
 | GET | `/api/silos/{id}/lecturas?range=24h\|48h\|7d&page=&pageSize=` | JWT | Historial paginado |
-| GET | `/api/alertas?status=&variant=` | JWT | Lista de alertas, filtrable |
+| GET | `/api/alertas?status=&variant=` | JWT | Lista de alertas, filtrable (2 params resueltos en la API) |
 | GET | `/api/alertas/{id}` | JWT | Detalle de alerta |
 | PATCH | `/api/alertas/{id}/resolver` | JWT | Marca una alerta como resuelta |
+| GET/PUT/DELETE | `/api/silos/{siloId}/umbrales` | JWT | ABM maestro-detalle de umbrales (PUT reemplaza los 3 en transacción; DELETE restaura recomendados) |
+| GET | `/api/lotes` · `/api/lotes/{id}` | JWT | Lista y detalle de lotes (Pasaporte de Calidad) |
+| POST | `/api/silos/{siloId}/lotes` | JWT | Inicia un lote (409 si ya hay uno activo) |
+| POST | `/api/lotes/{id}/finalizar` | JWT | Finaliza el lote (consolidación transaccional) |
+| GET | `/api/destinatarios` · `/api/lotes/{id}/destinatarios` | JWT | Catálogo y destinatarios de un pasaporte |
+| POST | `/api/lotes/{id}/compartir` | JWT | Comparte el pasaporte (alta N-N transaccional, idempotente) |
+| GET | `/api/tecnicos` | JWT | Técnicos de contacto activos |
+| POST | `/api/alertas/{alertaId}/consultas` | JWT | Envía una consulta a un técnico desde una alerta (sanitizada) |
+| GET | `/api/consultas` | JWT | Consultas del usuario |
+| GET/PUT | `/api/perfil/notificaciones` | JWT | Preferencias de notificaciones (1-1 con el usuario) |
+| PUT | `/api/perfil/password` | JWT | Cambio de contraseña (re-autenticación) |
 | GET | `/api/admin/usuarios` | JWT + rol Admin | Lista de usuarios (demuestra rutas protegidas por rol) |
 
 Todos los endpoints requieren `Authorization: Bearer <token>` salvo los dos de `auth`.
+Total: **30 endpoints**. La lista completa y ejecutable está en Swagger (`/swagger`).
 
 ## Auth híbrida: Firebase (registro/verificación) + JWT propio (login)
 

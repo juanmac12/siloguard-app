@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SiloGuard.Api.DTOs.Lotes;
 using SiloGuard.Api.Extensions;
+using SiloGuard.Business.Dtos.Lotes;
 using SiloGuard.Business.Services;
 using SiloGuard.Data.Entities;
 
@@ -48,6 +49,45 @@ public class LotesController : ControllerBase
         var lote = await _loteService.FinalizarAsync(User.GetUserId(), id, ct);
         return Ok(Map(lote));
     }
+
+    // Catalogo de bancos/acopios/compradores con los que se puede compartir un pasaporte.
+    [HttpGet("destinatarios")]
+    public async Task<ActionResult<List<DestinatarioResponse>>> Destinatarios(CancellationToken ct)
+    {
+        var destinatarios = await _loteService.ListDestinatariosCatalogoAsync(ct);
+        return Ok(destinatarios.Select(d => new DestinatarioResponse
+        {
+            Id = d.Id,
+            Nombre = d.Nombre,
+            Tipo = d.Tipo,
+            Contacto = d.Contacto,
+        }).ToList());
+    }
+
+    // Con quien ya se compartio este pasaporte.
+    [HttpGet("lotes/{id:int}/destinatarios")]
+    public async Task<ActionResult<List<LoteCompartidoResponse>>> DestinatariosDeLote(int id, CancellationToken ct)
+    {
+        var shares = await _loteService.ListDestinatariosDeLoteAsync(User.GetUserId(), id, ct);
+        return Ok(shares.Select(MapShare).ToList());
+    }
+
+    // Comparte el pasaporte con uno o mas destinatarios (alta N-N transaccional, idempotente).
+    [HttpPost("lotes/{id:int}/compartir")]
+    public async Task<ActionResult<List<LoteCompartidoResponse>>> Compartir(
+        int id, [FromBody] CompartirLoteRequest request, CancellationToken ct)
+    {
+        var shares = await _loteService.CompartirAsync(User.GetUserId(), id, request, ct);
+        return Ok(shares.Select(MapShare).ToList());
+    }
+
+    private static LoteCompartidoResponse MapShare(LoteDestinatario ld) => new()
+    {
+        DestinatarioId = ld.DestinatarioId,
+        Nombre = ld.Destinatario?.Nombre ?? string.Empty,
+        Tipo = ld.Destinatario?.Tipo ?? string.Empty,
+        CompartidoAt = ld.CompartidoAt,
+    };
 
     private static LoteResponse Map(Lote l) => new()
     {

@@ -179,7 +179,7 @@ Ver `src/design-system/SiloGuard_definicion_producto.md` para la descripción co
 > `backend/README.md` — esto es solo un resumen para orientarse rápido.
 
 ### Progreso
-- [x] Modelo de datos (7 tablas: `Users`, `Roles`, `UserRoles` N-N, `Silos`, `SensorReadings`, `Alerts`, `AuditLogs`)
+- [x] Modelo de datos (**14 tablas**: `Users`, `Roles`, `UserRoles` N-N, `Silos`, `SensorReadings`, `Alerts`, `Lotes`, `Umbrales`, `Destinatarios`, `LoteDestinatarios` N-N, `Tecnicos`, `ConsultasSoporte`, `PreferenciasNotificaciones`, `AuditLogs`)
 - [x] Arquitectura en 3 capas (`SiloGuard.Api` / `SiloGuard.Business` / `SiloGuard.Data`, sin ciclos)
 - [x] Auth propia con JWT + BCrypt, login gateado por email verificado en Firebase
 - [x] Middleware global de errores (nunca expone stack trace al cliente)
@@ -190,6 +190,12 @@ Ver `src/design-system/SiloGuard_definicion_producto.md` para la descripción co
 - [x] Seeder con datos demo (usuario `dev@siloguard.com` / `Demo1234`, 6 silos, ~1000 lecturas, 5 alertas)
 - [x] **Frontend reconectado a la API real** (`src/services/*`, `AppDataContext.tsx`, login/register propios)
 - [x] **Pasaporte de Calidad (Lotes)**: entidad `Lote` (1-N con `Silo`), score + promedios de sensores computados al finalizar (en transacción), auditoría automática. Endpoints: `POST /api/silos/{id}/lotes` (iniciar, 409 si ya hay uno activo), `POST /api/lotes/{id}/finalizar`, `GET /api/lotes`, `GET /api/lotes/{id}`. Front: tab Pasaporte + detalle de lote + botón Iniciar/Finalizar en el detalle del silo.
+- [x] **Umbrales por silo (2026-07-15)**: tabla `Umbrales` (3 filas por silo, check `Warn < Crit` en DB), `GET/PUT/DELETE /api/silos/{id}/umbrales` — ABM maestro-detalle con reemplazo transaccional y **rollback demostrable** (PUT con warn≥crit → 409, detalle intacto). Pantalla `src/app/umbrales/` conectada a la API real.
+- [x] **Pasaporte compartido (2ª N-N)**: `Destinatarios` + `LoteDestinatarios` (PK compuesta). `GET /api/destinatarios`, `POST /api/lotes/{id}/compartir` (transaccional, idempotente), `GET /api/lotes/{id}/destinatarios`.
+- [x] **Soporte técnico**: `Tecnicos` + `ConsultasSoporte`. `GET /api/tecnicos`, `POST /api/alertas/{id}/consultas` (sanitizado), `GET /api/consultas`.
+- [x] **Preferencias de notificaciones** (1-1 con `Users`): `GET/PUT /api/perfil/notificaciones`.
+- [x] **Filtro de alertas resuelto en la API** (rúbrica 3.4): las solapas de la app llaman `GET /api/alertas?status=&variant=` — el WHERE lo arma `AlertaRepository`, no el cliente.
+- [x] **Tests**: `backend/tests/SiloGuard.Tests` (xUnit) — 12 tests de seguridad y validators, `dotnet test` verde.
 
 ### Estructura
 
@@ -263,7 +269,9 @@ roles). En cambio:
 ### Pendiente / fuera de alcance (no lo pidió la rúbrica)
 
 - "Mis lanzas" (`perfil/lanzas.tsx`) sigue siendo mock — no hay entidad de dispositivo IoT en el backend, la rúbrica no lo exige.
-- Preferencias de notificaciones (`perfil/notificaciones.tsx`) no persisten.
-- "Configurar umbrales" es un placeholder sin implementar.
+- La pantalla `perfil/notificaciones.tsx` todavía no consume `GET/PUT /api/perfil/notificaciones` (el endpoint ya existe y funciona — queda cablear el front).
 - No hay botón de "reenviar correo de verificación" — si el usuario lo borra o expira,
   hoy no tiene forma de reenviarlo desde la app (quedaría para una próxima iteración).
+
+> **Para la defensa:** ver `docs/CHECKLIST-DEFENSA.md` — mapa ítem-por-ítem de la rúbrica
+> con qué mostrar, dónde, y las preguntas que el profesor hizo a otros grupos.

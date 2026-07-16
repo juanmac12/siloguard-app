@@ -140,6 +140,74 @@ namespace SiloGuard.Data.Migrations
                     b.ToTable("AuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("SiloGuard.Data.Entities.ConsultaSoporte", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlertaId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Mensaje")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("TecnicoId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertaId");
+
+                    b.HasIndex("TecnicoId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ConsultasSoporte", (string)null);
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.Destinatario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Contacto")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Destinatarios", (string)null);
+                });
+
             modelBuilder.Entity("SiloGuard.Data.Entities.Lote", b =>
                 {
                     b.Property<int>("Id")
@@ -206,6 +274,60 @@ namespace SiloGuard.Data.Migrations
                     b.HasIndex("SiloId");
 
                     b.ToTable("Lotes", (string)null);
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.LoteDestinatario", b =>
+                {
+                    b.Property<int>("LoteId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DestinatarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CompartidoAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("LoteId", "DestinatarioId");
+
+                    b.HasIndex("DestinatarioId");
+
+                    b.ToTable("LoteDestinatarios", (string)null);
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.PreferenciasNotificacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Advertencias")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SilencioDesde")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("SilencioHasta")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<bool>("SilencioNocturno")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("PreferenciasNotificaciones", (string)null);
                 });
 
             modelBuilder.Entity("SiloGuard.Data.Entities.Role", b =>
@@ -330,6 +452,75 @@ namespace SiloGuard.Data.Migrations
                     b.ToTable("Silos", (string)null);
                 });
 
+            modelBuilder.Entity("SiloGuard.Data.Entities.Tecnico", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Horario")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tecnicos", (string)null);
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.Umbral", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Crit")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("SiloId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Variable")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("Warn")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SiloId", "Variable")
+                        .IsUnique();
+
+                    b.ToTable("Umbrales", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Umbral_WarnLtCrit", "\"Warn\" < \"Crit\"");
+
+                            t.HasCheckConstraint("CK_Umbral_Warn_Positive", "\"Warn\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("SiloGuard.Data.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -408,6 +599,33 @@ namespace SiloGuard.Data.Migrations
                     b.Navigation("Silo");
                 });
 
+            modelBuilder.Entity("SiloGuard.Data.Entities.ConsultaSoporte", b =>
+                {
+                    b.HasOne("SiloGuard.Data.Entities.Alert", "Alerta")
+                        .WithMany()
+                        .HasForeignKey("AlertaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SiloGuard.Data.Entities.Tecnico", "Tecnico")
+                        .WithMany("Consultas")
+                        .HasForeignKey("TecnicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SiloGuard.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Alerta");
+
+                    b.Navigation("Tecnico");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SiloGuard.Data.Entities.Lote", b =>
                 {
                     b.HasOne("SiloGuard.Data.Entities.Silo", "Silo")
@@ -417,6 +635,36 @@ namespace SiloGuard.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Silo");
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.LoteDestinatario", b =>
+                {
+                    b.HasOne("SiloGuard.Data.Entities.Destinatario", "Destinatario")
+                        .WithMany("LotesCompartidos")
+                        .HasForeignKey("DestinatarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SiloGuard.Data.Entities.Lote", "Lote")
+                        .WithMany("Destinatarios")
+                        .HasForeignKey("LoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Destinatario");
+
+                    b.Navigation("Lote");
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.PreferenciasNotificacion", b =>
+                {
+                    b.HasOne("SiloGuard.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SiloGuard.Data.Entities.SensorReading", b =>
@@ -441,6 +689,17 @@ namespace SiloGuard.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SiloGuard.Data.Entities.Umbral", b =>
+                {
+                    b.HasOne("SiloGuard.Data.Entities.Silo", "Silo")
+                        .WithMany("Umbrales")
+                        .HasForeignKey("SiloId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Silo");
+                });
+
             modelBuilder.Entity("SiloGuard.Data.Entities.UserRole", b =>
                 {
                     b.HasOne("SiloGuard.Data.Entities.Role", "Role")
@@ -460,6 +719,16 @@ namespace SiloGuard.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SiloGuard.Data.Entities.Destinatario", b =>
+                {
+                    b.Navigation("LotesCompartidos");
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.Lote", b =>
+                {
+                    b.Navigation("Destinatarios");
+                });
+
             modelBuilder.Entity("SiloGuard.Data.Entities.Role", b =>
                 {
                     b.Navigation("UserRoles");
@@ -472,6 +741,13 @@ namespace SiloGuard.Data.Migrations
                     b.Navigation("Lotes");
 
                     b.Navigation("Readings");
+
+                    b.Navigation("Umbrales");
+                });
+
+            modelBuilder.Entity("SiloGuard.Data.Entities.Tecnico", b =>
+                {
+                    b.Navigation("Consultas");
                 });
 
             modelBuilder.Entity("SiloGuard.Data.Entities.User", b =>

@@ -14,8 +14,13 @@ namespace SiloGuard.Api.Controllers;
 public class PerfilController : ControllerBase
 {
     private readonly IPerfilService _perfilService;
+    private readonly IPreferenciasService _preferenciasService;
 
-    public PerfilController(IPerfilService perfilService) => _perfilService = perfilService;
+    public PerfilController(IPerfilService perfilService, IPreferenciasService preferenciasService)
+    {
+        _perfilService = perfilService;
+        _preferenciasService = preferenciasService;
+    }
 
     [HttpGet]
     public async Task<ActionResult<PerfilResponse>> Get(CancellationToken ct)
@@ -37,6 +42,29 @@ public class PerfilController : ControllerBase
         await _perfilService.CambiarPasswordAsync(User.GetUserId(), request, ct);
         return NoContent();
     }
+
+    [HttpGet("notificaciones")]
+    public async Task<ActionResult<PreferenciasResponse>> Preferencias(CancellationToken ct)
+    {
+        var prefs = await _preferenciasService.GetAsync(User.GetUserId(), ct);
+        return Ok(MapPrefs(prefs));
+    }
+
+    [HttpPut("notificaciones")]
+    public async Task<ActionResult<PreferenciasResponse>> UpdatePreferencias(
+        [FromBody] PreferenciasUpdateRequest request, CancellationToken ct)
+    {
+        var prefs = await _preferenciasService.UpdateAsync(User.GetUserId(), request, ct);
+        return Ok(MapPrefs(prefs));
+    }
+
+    private static PreferenciasResponse MapPrefs(PreferenciasNotificacion p) => new()
+    {
+        Advertencias = p.Advertencias,
+        SilencioNocturno = p.SilencioNocturno,
+        SilencioDesde = p.SilencioDesde,
+        SilencioHasta = p.SilencioHasta,
+    };
 
     private static PerfilResponse Map(User u) => new()
     {
