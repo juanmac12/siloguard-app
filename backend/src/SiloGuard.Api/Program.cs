@@ -64,4 +64,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Health check publico (sin auth): confirma que la API esta viva. Util como
+// primera evidencia en la defensa y para chequeos externos (Docker/monitoreo).
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    service = "SiloGuard.Api",
+    timestamp = DateTime.UtcNow,
+}));
+
 app.Run();
