@@ -37,13 +37,13 @@ export default function LoteDetailScreen() {
   const [showShare, setShowShare] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
-  const lote = lotes.find((l) => l.id === id);
+  const lote = lotes.find((l) => l.id === Number(id));
   const silo = lote ? silos.find((s) => s.id === lote.siloId) : undefined;
 
   if (!lote) return null;
 
   const copyLink = () => {
-    toast.addToast({ tone: "ok", title: "Link copiado", message: `siloguard.com/verify/${lote.id}` });
+    toast.addToast({ tone: "ok", title: "Link copiado", message: `siloguard.com/verify/${lote.codigo}` });
     setShowShare(false);
   };
 
@@ -80,14 +80,14 @@ export default function LoteDetailScreen() {
       <BottomSheet open={showShare} onClose={() => setShowShare(false)} title="Compartir certificado">
         <ShareOption icon="file-text" label="Descargar como PDF" sub="Documento listo para imprimir" onPress={openPdf} colors={colors} />
         <ShareOption icon="camera" label="Compartir como imagen" sub="Ideal para WhatsApp o email" onPress={openImage} colors={colors} />
-        <ShareOption icon="link" label="Copiar link de verificación" sub={`siloguard.com/verify/${lote.id}`} onPress={copyLink} colors={colors} />
+        <ShareOption icon="link" label="Copiar link de verificación" sub={`siloguard.com/verify/${lote.codigo}`} onPress={copyLink} colors={colors} />
         <ShareOption icon="scan-qr" label="Ver QR grande" sub="Para mostrar o escanear en persona" onPress={() => { setShowShare(false); setShowQR(true); }} colors={colors} />
       </BottomSheet>
 
       <Modal open={showQR} onClose={() => setShowQR(false)} title="Verificación del lote" size="sm">
         <View style={{ alignItems: "center", gap: 14 }}>
-          <FakeQR seed={lote.id} size={220} />
-          <Text style={styles2.qrModalCode}>{lote.id}</Text>
+          <FakeQR seed={lote.codigo} size={220} />
+          <Text style={styles2.qrModalCode}>{lote.codigo}</Text>
           <Text style={styles2.qrModalHint}>
             Escaneá este código para verificar la autenticidad del certificado en siloguard.com/verify
           </Text>

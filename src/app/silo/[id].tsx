@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
+import { siloApi } from "../../services/siloApi";
 import { useDeviceState } from "../../hooks/useDeviceState";
 import { useToast } from "../../components/Toast";
 import {
@@ -51,6 +52,17 @@ export default function SiloScreen() {
   const silo = silos.find((s) => s.id === Number(id));
   const device = useDeviceState(silo?.lastSignalAt);
   const deviceOffline = device.state !== "ok";
+
+  // Temperatura de los últimos 7 días para el sparkline. La API las devuelve de
+  // la más nueva a la más vieja; el gráfico se lee al revés.
+  const [trend, setTrend] = useState<number[]>([]);
+  useEffect(() => {
+    if (!silo) return;
+    siloApi
+      .getLecturas(silo.id, "7d", 1, 7)
+      .then((res) => setTrend(res.items.map((r) => r.temp).reverse()))
+      .catch(() => setTrend([]));
+  }, [silo?.id]);
 
   if (!silo) return null;
 
@@ -216,7 +228,7 @@ export default function SiloScreen() {
                   {silo.status === "critical" ? "↑ Crítico" : silo.status === "warn" ? "↑ Elevado" : "→ Estable"}
                 </Text>
               </View>
-              <Sparkline data={silo.trend} color={tc} width={280} height={60} fill />
+              <Sparkline data={trend.length >= 2 ? trend : [silo.temp, silo.temp]} color={tc} width={280} height={60} fill />
               <Pressable onPress={() => goHistorial("temp")} style={[styles.histLink, { borderTopColor: colors.borderDefault }]}>
                 <Text style={[styles.histLinkText, { color: colors.actionPrimary }]}>Ver historial completo</Text>
                 <Icon name="chevron-right" size={14} color={colors.actionPrimary} />

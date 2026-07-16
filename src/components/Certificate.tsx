@@ -62,7 +62,7 @@ export function Certificate({ lote, silo, onQRTap }: { lote: Lote; silo?: Silo; 
           <Text style={styles.brand}>SiloGuard</Text>
         </View>
         <Text style={styles.headerLabel}>CERTIFICADO DE CALIDAD</Text>
-        <Text style={styles.folio}>N° {lote.id}</Text>
+        <Text style={styles.folio}>N° {lote.codigo}</Text>
         <StatusBadge tone={isMon ? 'ok' : 'resolved'} label={isMon ? 'En monitoreo' : 'Finalizado'} style={{ marginTop: 2 }} />
       </View>
 
@@ -84,12 +84,12 @@ export function Certificate({ lote, silo, onQRTap }: { lote: Lote; silo?: Silo; 
 
       <View style={styles.qrRow}>
         <Pressable onPress={onQRTap} accessibilityLabel="Ampliar código QR">
-          <FakeQR seed={lote.id} size={64} />
+          <FakeQR seed={lote.codigo} size={64} />
         </Pressable>
         <View style={styles.qrTextCol}>
           <Text style={styles.qrLabel}>HASH DE VERIFICACIÓN</Text>
           <Text style={styles.qrHash} numberOfLines={1}>
-            {lote.id}
+            {lote.codigo}
           </Text>
           <Pressable onPress={onQRTap} style={styles.qrLink}>
             <Text style={styles.qrLinkLabel}>Ampliar QR</Text>
