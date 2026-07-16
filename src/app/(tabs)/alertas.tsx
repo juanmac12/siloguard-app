@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Spacing, ThemeColors, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
-import { useAppData } from "../../contexts/AppDataContext";
+import { useAppData, SiloAlert } from "../../contexts/AppDataContext";
 import { AlertCard, EmptyState, Tabs, TabItem } from "../../components";
 
 const TABS: TabItem[] = [
@@ -15,17 +15,37 @@ const TABS: TabItem[] = [
 
 type TabId = "todas" | "criticas" | "advertencias" | "resueltas";
 
+/** Cada tab es un query a la API, no un filtro en memoria. */
+const TAB_QUERY: Record<TabId, { status?: string; variant?: string }> = {
+  todas: {},
+  criticas: { status: "active", variant: "critical" },
+  advertencias: { status: "active", variant: "warning" },
+  resueltas: { status: "resolved" },
+};
+
 export default function AlertasScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { alerts } = useAppData();
+  const { alerts, filterAlerts } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<TabId>("todas");
 
+  // La lista la resuelve el servidor (GET /api/alertas?status=&variant=).
+  const [list, setList] = useState<SiloAlert[]>(alerts);
+  useEffect(() => {
+    let alive = true;
+    const q = TAB_QUERY[activeTab];
+    filterAlerts(q.status, q.variant)
+      .then((r) => { if (alive) setList(r); })
+      .catch(() => { if (alive) setList([]); });
+    return () => { alive = false; };
+  }, [activeTab, alerts]);
+
+  // Los contadores de los tabs salen del estado que ya tenemos: pedirlos a la
+  // API serían 4 requests más solo para los badges.
   const critical = alerts.filter((a) => a.status === "active" && a.variant === "critical");
   const warnings = alerts.filter((a) => a.status === "active" && a.variant === "warning");
   const resolved = alerts.filter((a) => a.status === "resolved");
-  const list = activeTab === "todas" ? alerts : activeTab === "criticas" ? critical : activeTab === "advertencias" ? warnings : resolved;
 
   const tabsWithCounts: TabItem[] = TABS.map((t) => ({
     ...t,

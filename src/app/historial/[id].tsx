@@ -1,25 +1,25 @@
-import { useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { Icon, Tabs, ZoneChart } from "../../components";
-import type { Silo } from "../../contexts/AppDataContext";
+import { siloApi } from "../../services/siloApi";
+import type { LecturaResponse } from "../../services/types";
+import { Icon, Tabs, ZoneChart, EmptyState } from "../../components";
+import type { Silo, SiloThresholds, ThresholdPair } from "../../contexts/AppDataContext";
 
 type Variable = "temp" | "hum" | "co2";
-
-const TH: Record<Variable, { warn: number; crit: number }> = {
-  temp: { warn: 28, crit: 35 },
-  hum: { warn: 16, crit: 20 },
-  co2: { warn: 600, crit: 800 },
-};
+type Series = Record<Variable, number[]>;
 
 const VCFG: Record<Variable, { label: string; icon: "thermometer" | "droplet" | "wind"; unit: string }> = {
   temp: { label: "Temperatura", icon: "thermometer", unit: "°C" },
   hum: { label: "Humedad", icon: "droplet", unit: "%" },
   co2: { label: "CO₂", icon: "wind", unit: "ppm" },
 };
+
+/** 168 horas + la actual: la serie completa que se pide una vez y se recorta por rango. */
+const N = 169;
 
 const RANGES = [
   { id: "24", label: "24h", hours: 24 },
@@ -28,48 +28,50 @@ const RANGES = [
   { id: "168", label: "7 días", hours: 168 },
 ];
 
-/** Generador determinista (mismo silo -> misma curva) — portado de historial-screen.jsx. */
-function rng(seed: number) {
-  let s = ((seed % 2147483647) + 2147483647) % 2147483647 || 1;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
+/**
+ * Lleva las lecturas de la API a una serie horaria de 169 puntos (vieja → nueva).
+ * Los huecos se rellenan con el último valor conocido: el sensor puede saltear
+ * una hora y el gráfico necesita la grilla completa.
+ */
+function toHourly(items: LecturaResponse[]): Series | null {
+  if (items.length === 0) return null;
 
-function genData(silo: Silo) {
-  const r = rng(silo.id * 7919 + 42);
-  const N = 169;
-  function curve(end: number, range: number, shape: "exp" | "sig" | "linear", noise: number, daily: number) {
-    const start = end - range;
-    const arr: number[] = [];
-    for (let i = 0; i < N; i++) {
-      const t = i / (N - 1);
-      let b: number;
-      if (shape === "exp") b = start + range * Math.pow(t, 2.2);
-      else if (shape === "sig") b = start + range / (1 + Math.exp(-10 * (t - 0.45)));
-      else b = start + range * t;
-      arr.push(+(b + (r() - 0.5) * 2 * noise + daily * Math.sin((i / 24) * Math.PI * 2 - 0.9)).toFixed(1));
-    }
-    arr[N - 1] = end;
-    return arr;
+  // La API devuelve de la más nueva a la más vieja.
+  const chrono = [...items].reverse();
+  const endMs = new Date(chrono[chrono.length - 1].timestamp).getTime();
+
+  const acc = Array.from({ length: N }, () => ({ temp: 0, hum: 0, co2: 0, n: 0 }));
+  chrono.forEach((r) => {
+    const hoursAgo = Math.round((endMs - new Date(r.timestamp).getTime()) / 3_600_000);
+    const i = N - 1 - hoursAgo;
+    if (i < 0 || i >= N) return;
+    acc[i].temp += r.temp;
+    acc[i].hum += r.hum;
+    acc[i].co2 += r.co2;
+    acc[i].n += 1;
+  });
+
+  const first = acc.find((b) => b.n > 0);
+  if (!first) return null;
+
+  const out: Series = { temp: [], hum: [], co2: [] };
+  let last = { temp: first.temp / first.n, hum: first.hum / first.n, co2: first.co2 / first.n };
+  for (const b of acc) {
+    if (b.n > 0) last = { temp: b.temp / b.n, hum: b.hum / b.n, co2: b.co2 / b.n };
+    out.temp.push(Math.round(last.temp * 10) / 10);
+    out.hum.push(Math.round(last.hum * 10) / 10);
+    out.co2.push(Math.round(last.co2));
   }
-  const c = silo.status === "critical";
-  const w = silo.status === "warn";
-  return {
-    temp: curve(silo.temp, c ? 16 : w ? 5 : 2, c ? "exp" : "linear", c ? 0.6 : 0.3, c ? 0.8 : 1.2),
-    hum: curve(silo.hum, c ? 3 : w ? 3 : 1, "linear", 0.4, 0.3),
-    co2: curve(silo.co2, c ? 400 : w ? 120 : 40, c ? "sig" : "linear", c ? 15 : 8, 5),
-  };
+  return out;
 }
 
 function getVal(silo: Silo, v: Variable): number {
   return v === "temp" ? silo.temp : v === "hum" ? silo.hum : silo.co2;
 }
 
-function getTone(silo: Silo, v: Variable): "ok" | "warn" | "critical" {
+function getTone(silo: Silo, v: Variable, th: ThresholdPair): "ok" | "warn" | "critical" {
   const val = getVal(silo, v);
-  return val >= TH[v].crit ? "critical" : val >= TH[v].warn ? "warn" : "ok";
+  return val >= th.crit ? "critical" : val >= th.warn ? "warn" : "ok";
 }
 
 function statusMsg(tone: "ok" | "warn" | "critical", slice: number[], th: { warn: number; crit: number }): string {
@@ -82,19 +84,20 @@ function statusMsg(tone: "ok" | "warn" | "critical", slice: number[], th: { warn
   return "";
 }
 
-function VariablePanel({ variable, silo, data, timeRangeHours, colors, styles }: {
+function VariablePanel({ variable, silo, data, thresholds, timeRangeHours, colors, styles }: {
   variable: Variable;
   silo: Silo;
-  data: Record<Variable, number[]>;
+  data: Series;
+  thresholds: SiloThresholds;
   timeRangeHours: number;
   colors: ThemeColors;
   styles: ReturnType<typeof makeStyles>;
 }) {
   const cfg = VCFG[variable];
-  const th = TH[variable];
-  const slice = data[variable].slice(168 - timeRangeHours);
+  const th = thresholds[variable];
+  const slice = data[variable].slice(N - 1 - timeRangeHours);
   const cv = getVal(silo, variable);
-  const tone = getTone(silo, variable);
+  const tone = getTone(silo, variable, th);
   const hex = tone === "critical" ? colors.statusCritical : tone === "warn" ? colors.statusWarn : colors.statusOk;
   const msg = statusMsg(tone, slice, th);
 
@@ -154,16 +157,43 @@ function VariablePanel({ variable, silo, data, timeRangeHours, colors, styles }:
 export default function HistorialScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { silos } = useAppData();
+  const { silos, thresholdsFor } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id, variable } = useLocalSearchParams<{ id: string; variable?: string }>();
   const [range, setRange] = useState<string>("48");
 
   const silo = silos.find((s) => s.id === Number(id));
-  const data = useMemo(() => (silo ? genData(silo) : null), [silo?.id]);
 
-  if (!silo || !data) return null;
+  const [data, setData] = useState<Series | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "empty">("loading");
+  useEffect(() => {
+    if (!silo) return;
+    let alive = true;
+    setState("loading");
+    // Se piden los 7 días una sola vez y cada rango se recorta acá. Además de
+    // ahorrar requests al cambiar de tab, hace que 72h funcione: la API solo
+    // acepta 24h/48h/7d.
+    siloApi
+      .getLecturas(silo.id, "7d", 1, 200)
+      .then((res) => {
+        if (!alive) return;
+        const hourly = toHourly(res.items);
+        setData(hourly);
+        setState(hourly ? "ready" : "empty");
+      })
+      .catch(() => {
+        if (!alive) return;
+        setData(null);
+        setState("empty");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [silo?.id]);
 
+  if (!silo) return null;
+
+  const thresholds = thresholdsFor(silo.id);
   const timeRangeHours = RANGES.find((r) => r.id === range)?.hours ?? 48;
   const order: Variable[] = variable === "hum" ? ["hum", "temp", "co2"] : variable === "co2" ? ["co2", "temp", "hum"] : ["temp", "hum", "co2"];
 
@@ -195,9 +225,20 @@ export default function HistorialScreen() {
           </Text>
         </View>
 
-        {order.map((v) => (
-          <VariablePanel key={v} variable={v} silo={silo} data={data} timeRangeHours={timeRangeHours} colors={colors} styles={styles} />
-        ))}
+        {state === "loading" ? (
+          <ActivityIndicator color={colors.actionPrimary} style={{ marginTop: 32 }} />
+        ) : !data ? (
+          <EmptyState
+            variant="empty"
+            size="sm"
+            title="Sin lecturas todavía"
+            body="Cuando la lanza mande datos, vas a ver el historial acá."
+          />
+        ) : (
+          order.map((v) => (
+            <VariablePanel key={v} variable={v} silo={silo} data={data} thresholds={thresholds} timeRangeHours={timeRangeHours} colors={colors} styles={styles} />
+          ))
+        )}
       </ScrollView>
     </View>
   );
