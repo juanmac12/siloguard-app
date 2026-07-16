@@ -250,7 +250,9 @@ export default function SiloScreen() {
                 silo={a.silo}
                 time={a.time}
                 description={a.desc}
-                onPress={a.status === "active" ? () => router.push(`/alerta/${a.id}` as any) : undefined}
+                estimate={a.estimate}
+                action={a.action}
+                onPress={() => router.push(`/alerta/${a.id}` as any)}
               />
             ))}
           </View>

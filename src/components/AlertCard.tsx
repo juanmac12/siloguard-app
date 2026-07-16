@@ -17,6 +17,8 @@ export function AlertCard({
   silo,
   time,
   description,
+  estimate,
+  action,
   onPress,
   style,
 }: {
@@ -25,6 +27,8 @@ export function AlertCard({
   silo: string;
   time: string;
   description: string;
+  estimate?: string;
+  action?: string;
   onPress?: () => void;
   style?: ViewStyle;
 }) {
@@ -85,8 +89,25 @@ export function AlertCard({
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.silo}>{silo}</Text>
           </View>
+          {onPress ? <Icon name="chevron-right" size={18} color={colors.textMuted} /> : null}
         </View>
         <Text style={styles.description}>{description}</Text>
+        {(estimate || action) && !isResolved ? (
+          <View style={styles.footerRow}>
+            {estimate ? (
+              <View style={[styles.footerChip, { backgroundColor: v.tint }]}>
+                <Icon name="clock" size={13} color={v.color} />
+                <Text style={[styles.footerChipText, { color: v.color }]}>{estimate}</Text>
+              </View>
+            ) : null}
+            {action ? (
+              <View style={[styles.footerChip, { backgroundColor: colors.surfaceInput }]}>
+                <Icon name="wind" size={13} color={colors.textSecondary} />
+                <Text style={[styles.footerChipText, { color: colors.textSecondary }]}>{action}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -112,6 +133,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     topRow: {
       flexDirection: 'row',
+      alignItems: 'center',
       gap: Spacing.md,
     },
     iconBadge: {
@@ -170,6 +192,24 @@ const makeStyles = (c: ThemeColors) =>
       fontSize: 14,
       fontFamily: fontFamilyForWeight(FontWeight.regular),
       lineHeight: 22,
+    },
+    footerRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    footerChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius: Radius.full,
+    },
+    footerChipText: {
+      fontSize: 11.5,
+      fontWeight: FontWeight.semibold,
+      fontFamily: fontFamilyForWeight(FontWeight.semibold),
     },
   });
 
