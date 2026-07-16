@@ -4,6 +4,7 @@ import {
   StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../constants/Theme";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAppData } from "../contexts/AppDataContext";
@@ -36,6 +37,7 @@ interface FormErrors {
 export default function AgregarSiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { addSilo } = useAppData();
   const toast = useToast();
   const conn = useConnState();
@@ -151,7 +153,7 @@ export default function AgregarSiloScreen() {
 
         {/* ── Step 1: QR ── */}
         {step === "qr" && (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}>
             <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Conectar dispositivo</Text>
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
               Apuntá la cámara al código QR del módulo SiloGuard para identificarlo.
@@ -197,7 +199,7 @@ export default function AgregarSiloScreen() {
 
         {/* ── Step 2: WiFi ── */}
         {step === "wifi" && (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]}>
             <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Seleccioná tu red WiFi</Text>
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
               El módulo necesita conectarse a tu red local para enviar datos.
@@ -248,7 +250,7 @@ export default function AgregarSiloScreen() {
 
         {/* ── Step 3: Form ── */}
         {step === "form" && (
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
             <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Datos del silo</Text>
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>Completá la información para identificar este silo en tu cuenta.</Text>
 

@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -34,6 +35,7 @@ function SCard({ label, children, colors }: { label: string; children: React.Rea
 export default function NotificacionesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { notificationSettings, updateNotificationSettings } = useAppData();
 
   return (
@@ -45,7 +47,7 @@ export default function NotificacionesScreen() {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Notificaciones</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Spacing.xl + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <SCard label="ALERTAS" colors={colors}>
           <NRow icon="alert-triangle" label="Alertas críticas" desc="Siempre activas — Requerido" checked disabled onChange={() => {}} colors={colors} />
           <NRow

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -29,6 +30,7 @@ interface FormErrors {
 export default function EditarSiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { silos, updateSilo, deleteSilo } = useAppData();
   const toast = useToast();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -124,7 +126,7 @@ export default function EditarSiloScreen() {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: errors.name ? colors.statusCritical : colors.textSecondary }]}>Nombre del silo</Text>
             <TextInput

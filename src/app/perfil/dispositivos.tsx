@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, FontSize, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -52,6 +53,7 @@ function DeviceCard({
 export default function DispositivosScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { devices, silos } = useAppData();
 
   const siloNameFor = (siloId: number | null) => silos.find((s) => s.id === siloId)?.name ?? "Sin asignar";
@@ -67,7 +69,7 @@ export default function DispositivosScreen() {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Mis dispositivos</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Spacing.xl + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <View style={styles.summaryRow}>
           <View style={[styles.summaryChip, { backgroundColor: "rgba(34,197,94,0.08)", borderColor: "rgba(34,197,94,0.2)" }]}>
             <Text style={[styles.summaryValue, { color: colors.actionPrimary }]}>{onlineCount}</Text>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
@@ -48,6 +49,7 @@ function toneFor(value: number, warn: number, crit: number): "ok" | "warn" | "cr
 export default function SiloScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { silos, alerts, lotes, iniciarLote, finalizarLote, thresholdsFor } = useAppData();
   const toast = useToast();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -198,7 +200,7 @@ export default function SiloScreen() {
         />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {tab === "info" ? (
           <>
             <Text style={[LBL_STYLE, { color: colors.textSecondary }]}>Información del grano</Text>

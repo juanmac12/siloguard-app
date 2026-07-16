@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, Linking, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../constants/Theme";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAppData } from "../contexts/AppDataContext";
@@ -38,6 +39,7 @@ function timeStr(d: Date): string {
 export default function ContactoTecnicoScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { alerts } = useAppData();
   const conn = useConnState();
   const { inHours } = useTechAvailability();
@@ -90,7 +92,7 @@ export default function ContactoTecnicoScreen() {
         <Text style={styles.headerTitle}>Contactar técnico</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {offline && (
           <View style={[styles.offlineBox, { backgroundColor: "rgba(245,158,11,0.06)", borderColor: colors.statusWarn }]}>
             <Icon name="wifi-off" size={16} color={colors.statusWarn} />
