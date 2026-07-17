@@ -115,20 +115,22 @@ docker inspect --format '{{.State.Health.Status}}' siloguard-db
 
 ### 4. Configurar el backend
 
-`appsettings.json` trae las claves vacías. Para desarrollo, completá los valores en
-`appsettings.Development.json` (gitignored) o por variables de entorno:
+`appsettings.json` ya trae valores de desarrollo listos para usar contra el Postgres del
+`docker-compose` de arriba — **no hace falta tocar nada** para levantarlo en local.
 
-| Clave | Descripción |
+| Clave | Valor por defecto |
 |---|---|
 | `ConnectionStrings:Default` | `Host=localhost;Port=5432;Database=siloguard;Username=siloguard;Password=siloguard_dev_pw` |
-| `Jwt:Key` | Clave secreta para firmar el JWT (larga y aleatoria) |
+| `Jwt:Key` | Clave de desarrollo (cambiar en un despliegue real) |
 | `Jwt:Issuer` / `Jwt:Audience` | `SiloGuard.Api` / `SiloGuard.App` |
-| `Jwt:ExpireMinutes` | Duración del token (por defecto 480) |
-| `Firebase:CredentialsPath` | Ruta al JSON de la cuenta de servicio de Firebase Admin |
-| `Firebase:VerificationBypassEmails` | Emails que saltean el gate de verificación (útil en la defensa) |
+| `Firebase:CredentialsPath` | vacío — sin Firebase configurado, el chequeo de email verificado se omite automáticamente |
+| `Firebase:VerificationBypassEmails` | `dev@siloguard.com` (ver [Credenciales de prueba](#credenciales-de-prueba)) |
 
-Las migraciones y el seeder se aplican **solos al arrancar** en Development
-(`db.Database.MigrateAsync()` + `DbSeeder.SeedAsync()`).
+`launchSettings.json` fuerza `ASPNETCORE_ENVIRONMENT=Development`, así que las migraciones
+y el seeder se aplican **solos al arrancar** (`db.Database.MigrateAsync()` +
+`DbSeeder.SeedAsync()`) — no hay que correr nada a mano. Para sobreescribir estos valores
+(por ejemplo con credenciales reales de Firebase), usá `appsettings.Development.json`
+(gitignored) o variables de entorno equivalentes (`ConnectionStrings__Default`, `Jwt__Key`, etc.).
 
 ### 5. Configurar la URL de la API en la app
 
