@@ -115,10 +115,15 @@ su diseño **codeado dentro del repositorio**, en dos capas:
 - **Design system** (`src/design-system/`): prototipo HTML de referencia + **tokens** (paleta,
   tipografía, grid de 8pt, radios, sombras) y un bundle de componentes. Es la fuente de verdad
   visual del producto.
-- **Componentes React Native reutilizables** (`src/components/`): `Button`, `Input`,
-  `AlertCard`, `SensorStat`, `StatusBadge`, `ScoreRing`, `ListItem`, `NavBar`, `AuthHeader`,
-  `EmptyState`, `OfflineBanner`, `TutorialCard`, entre otros — implementan el design system en
-  la app real.
+- **Componentes React Native reutilizables** (`src/components/`, 17 en total): `Button`,
+  `Input`, `AlertCard`, `SensorStat`, `StatusBadge`, `ScoreRing`, `ListItem`, `NavBar`,
+  `AuthHeader`, `EmptyState`, `OfflineBanner`, `DeviceOfflineBanner`, `TutorialCard`, `Icon`
+  (set de íconos unificado), `AuthStepDots` y `OnboardingStepProgress` (progreso de flujos por
+  pasos) y `DisabledHint` — implementan el design system en la app real y se exponen mediante un
+  barrel (`index.ts`).
+
+La app incluye además una pantalla **`/ds-showcase`**: un catálogo navegable de los componentes
+del design system, que permite verlos todos renderizados en el dispositivo real.
 
 **Fundamentos de diseño:** dark-first, español rioplatense (voseo), sistema de espaciado 8pt,
 íconos unificados en un único set (sin mezclar librerías), y estados visuales de color
@@ -179,11 +184,15 @@ la API):
 | Umbrales | Editor de umbrales | Sliders CO₂/temp/humedad, guardar y restaurar recomendados | Implementada (API real) |
 | Pasaporte | Lista de lotes | Lotes de la temporada con estado, score y días | Implementada (API real) |
 | Pasaporte | Detalle del lote | Certificado con score, QR y compartir | Implementada (API real) |
-| Soporte | Contacto con técnico | Llamada/mensaje desde una alerta | Implementada (UI; endpoint de consultas disponible) |
+| Soporte | Contacto con técnico | Llamada real (`tel:`) y mensaje por WhatsApp con contexto de la alerta precargado | Implementada (acciones reales vía `Linking`) |
+| Interno | Showcase del design system (`/ds-showcase`) | Catálogo navegable de los componentes renderizados en el dispositivo | Implementada (herramienta de desarrollo) |
 
 Además, los **estados especiales** (celular sin conexión y lanza sin respuesta) se resuelven
 como banners globales reutilizables (`OfflineBanner`, `DeviceOfflineBanner`), no como pantallas
-separadas.
+separadas. Ambos componentes están construidos y montados en Dashboard y Detalle del silo, pero
+hoy se activan mediante *flags* de simulación (`MOCK_IS_OFFLINE`, `MOCK_DEVICE_OFFLINE`, ambos
+en `false`): permiten demostrar el estado forzando el flag, pero todavía no están conectados a
+la detección real de conectividad ni al *heartbeat* de la lanza (ver 11.2).
 
 ## 9. Funcionalidades implementadas
 
@@ -199,23 +208,28 @@ separadas.
 | Configuración de umbrales | ABM por silo con guardado transaccional y restaurar valores recomendados |
 | Pasaporte de Calidad | Lista de lotes, certificado con score histórico, código de verificación y compartir (copiar link real) |
 | Perfil y preferencias | Datos del productor y establecimiento, cambio de contraseña, preferencias de notificación |
-| Estados especiales | Banners de sin conexión y lanza sin respuesta, con datos cacheados y acciones deshabilitadas |
+| Contacto con técnico | Desde una alerta: llamada directa (`tel:`) o mensaje de WhatsApp con el contexto de la alerta precargado (`Linking`) |
+| Estados especiales | Banners reutilizables de sin conexión y lanza sin respuesta, con datos cacheados y acciones deshabilitadas (hoy accionados por *flags* de simulación, ver 11.2) |
 | Feedback y usabilidad | Estados de carga, validación en cliente, mensajes de error claros y confirmaciones |
 
 ## 10. Stack tecnológico y estructura del proyecto
 
-| Capa / herramienta | Uso dentro del proyecto |
-|---|---|
-| React Native + Expo (SDK 54) | Base de la app móvil, ejecución en Android/iOS vía Expo Go |
-| TypeScript | Tipado de silos, alertas, lotes, perfil y formularios |
-| Expo Router | Navegación basada en archivos (`src/app/`), con grupo de rutas `(tabs)` |
-| React Context (`AppDataContext`) | Estado global de datos y acciones; valida el token contra la API al iniciar |
-| `expo-secure-store` | Persistencia segura del JWT |
-| Firebase Auth (SDK cliente) | Registro y verificación de email |
-| `react-native-svg` | Gráficos (sparkline, historial, score ring, QR) |
-| `@react-native-community/datetimepicker` | Selector de fecha nativo (fecha de acopio) |
-| `expo-clipboard` | Copiar link de verificación del pasaporte |
-| API backend .NET | El frontend consume endpoints REST (`src/config/api.ts`, `src/services/*Api.ts`) con `Authorization: Bearer` |
+| Capa / herramienta | Versión | Uso dentro del proyecto |
+|---|---|---|
+| React Native + Expo | RN 0.81.5 · Expo SDK 54 | Base de la app móvil, ejecución en Android/iOS vía Expo Go |
+| React | 19.1.0 | Librería de UI subyacente |
+| TypeScript | 5.9.2 | Tipado de silos, alertas, lotes, perfil y formularios |
+| Expo Router | 6.0.24 | Navegación basada en archivos (`src/app/`), con grupo de rutas `(tabs)` |
+| React Context (`AppDataContext`) | — | Estado global de datos y acciones; valida el token contra la API al iniciar |
+| `expo-secure-store` | 15.0.8 | Persistencia segura del JWT |
+| Firebase Auth (SDK cliente) | 12.15.0 | Registro y verificación de email |
+| `react-native-svg` | 15.12.1 | Gráficos (sparkline, historial, score ring, QR) |
+| `@react-native-community/datetimepicker` | 8.4.4 | Selector de fecha nativo (fecha de acopio, en edición de silo) |
+| `expo-clipboard` | 8.0.8 | Copiar link de verificación del pasaporte |
+| `react-native-safe-area-context` · `react-native-screens` | 5.6.0 · 4.16.0 | Áreas seguras (notch) y navegación nativa |
+| `expo-linking` | — | Llamada telefónica y deep link a WhatsApp desde una alerta |
+| `react-native-web` + `react-dom` | 0.21.0 | Soporte de ejecución en navegador (`expo start --web`), usado para desarrollo |
+| API backend .NET | — | El frontend consume endpoints REST (`src/config/api.ts`, `src/services/*Api.ts`) con `Authorization: Bearer` |
 
 **Estructura general (`src/`):**
 - `app/` — pantallas por rutas: raíz (splash, welcome, login, register…), `(tabs)/` (dashboard, alertas, pasaporte, perfil), y subrutas (`silo/[id]`, `alerta/[id]`, `umbrales/[siloId]`, `perfil/*`).
@@ -238,10 +252,13 @@ refresco se resuelve al abrir/recargar, suficiente para el MVP.
 - Pasaporte de Calidad con certificado y compartición.
 
 ### 11.2 Funcionalidades parciales o dependientes
-- **Pantalla de Notificaciones:** la UI está lista; la persistencia de preferencias ya existe en la API (`GET/PUT /api/perfil/notificaciones`) pero falta cablear la pantalla.
+- **Pantalla de Notificaciones:** la UI está lista (toggles de advertencias y silencio nocturno); la persistencia de preferencias ya existe en la API (`GET/PUT /api/perfil/notificaciones`) pero la pantalla todavía usa estado local y no la consume.
 - **Compartir pasaporte como PDF/imagen:** hoy muestra "Próximamente" (copiar link sí funciona); requiere captura de vista / generación de PDF en el cliente.
 - **Dispositivos / "Mis lanzas":** usa datos mock — no hay entidad de dispositivo IoT en el backend (no lo exige el alcance).
-- **Vinculación de lanza (QR + WiFi):** representada de forma simulada dentro del alta de silo; no hay hardware real en el MVP.
+- **Vinculación de lanza (QR + WiFi):** representada de forma simulada dentro del alta de silo; el escaneo de redes usa un listado fijo y la lectura inicial del silo se genera con valores aleatorios dentro de rango. No hay hardware real en el MVP.
+- **Banners de estado especial:** `OfflineBanner` y `DeviceOfflineBanner` están implementados y montados, pero se accionan con *flags* de simulación (`MOCK_IS_OFFLINE`, `MOCK_DEVICE_OFFLINE`); falta conectarlos a la detección real de red y al *heartbeat* de la lanza.
+- **Selector de fecha nativo:** disponible en la edición de silo; en el alta la fecha de acopio se autocompleta con la fecha del día sin selector.
+- **Pull-to-refresh:** el `AppDataContext` ya expone `refresh()` y las pantallas lo invocan al montarse, pero todavía no está enganchado a un `RefreshControl` en los listados.
 
 ### 11.3 Fuera del alcance actual del MVP
 - Envío real de notificaciones push (Expo/FCM) y evaluación de lecturas en segundo plano.
@@ -257,10 +274,11 @@ concreto y medible: **si el productor actúa a tiempo sobre una alerta temprana 
 grano**. La app no intenta resolver toda la cadena agroindustrial desde el inicio; prioriza el
 flujo principal de monitoreo, alerta, acción y certificación.
 
-El proyecto cuenta con un usuario claramente definido, ~25 pantallas funcionales organizadas
-por bloques, formularios con validación, navegación completa, integración con autenticación
-propia, consumo de una API REST real, filtros y paginado en el servidor, y un design system
-codeado en el repositorio. Esto permite demostrar el valor central de la solución sin depender
+El proyecto cuenta con un usuario claramente definido, 25 pantallas funcionales organizadas
+por bloques (más un showcase interno del design system), formularios con validación, navegación
+completa, integración con autenticación propia, consumo de una API REST real, filtros y paginado
+resueltos en el servidor, y un design system codeado en el repositorio con 17 componentes
+reutilizables. Esto permite demostrar el valor central de la solución sin depender
 todavía de hardware masivo, envío de push o funcionalidades avanzadas.
 
 Como entrega final, esta documentación de producto y frontend se complementa con la

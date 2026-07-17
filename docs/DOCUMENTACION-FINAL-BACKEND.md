@@ -164,9 +164,10 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/SiloGuard.Api --urls
 
 Al arrancar en `Development`, la API aplica migraciones pendientes y corre el **seeder** (una
 sola vez si `Users` está vacío; los datos extra se siembran de forma idempotente): 2 usuarios
-demo, 6 silos, ~1000 lecturas (7 días de historial por silo, para demostrar paginado), 5
-alertas, lotes, técnicos y destinatarios. Además re-ancla los timestamps al presente para que
-el historial nunca aparezca vacío en la demo.
+demo con sus 2 roles, 6 silos, **1.014 lecturas** (169 por silo — 7 días de historial hora a
+hora, suficiente para demostrar el paginado), 5 alertas, 2 lotes, 3 umbrales, 2 técnicos y 4
+destinatarios. Además re-ancla los timestamps al presente para que el historial nunca aparezca
+vacío en la demo.
 
 - Usuario demo (Productor): `dev@siloguard.com` / `Demo1234`
 - Usuario admin (Productor + Admin): `admin@siloguard.com` / `Admin1234`
@@ -186,7 +187,7 @@ Postgres y nunca pasa por Firebase.
 |---|---|
 | Swagger / OpenAPI (`/swagger`) | Endpoints documentados, parámetros, cuerpos de request y respuestas |
 | `GET /health` | La API responde y está disponible (sin auth) |
-| Tests xUnit (`dotnet test`) | 12 tests verdes: hash BCrypt, sanitización XSS, validators |
+| Tests xUnit (`dotnet test`) | 12 casos verdes (9 métodos; un `[Theory]` aporta 4 casos): hash BCrypt, sanitización XSS, validators |
 | Pruebas manuales con Swagger | Login, CRUD de silos, umbrales, resolución de alertas, pasaporte |
 | Base de datos PostgreSQL (pgAdmin) | Persistencia real y trazas de `AuditLogs` |
 | Seeder de datos | Datos suficientes para demostrar paginado y navegación |
@@ -306,7 +307,8 @@ iniciar** (en `Development`), por lo que la base queda creada o actualizada auto
 incluye un **seeder** de datos de prueba útil para demostrar paginado y flujo de uso.
 
 - **Índices:** `SensorReadings(SiloId, Timestamp)` para el historial; índices únicos en `Umbrales(SiloId, Variable)` y en la FK 1-1 de preferencias.
-- **Check constraints:** rangos de sensores (`Temp -50..150`, `Hum 0..100`, `Co2 >= 0`) y `Warn < Crit` en umbrales — además de validar, son la base de la demo de rollback transaccional.
+- **Migraciones:** 3 aplicadas — `InitialCreate`, `AddLotes` y `AddUmbralesPasaporteCompartidoYSoporte`.
+- **Check constraints (5):** rangos de sensores (`CK_SensorReading_Temp_Range` -50..150, `CK_SensorReading_Hum_Range` 0..100, `CK_SensorReading_Co2_Range` >= 0) y en umbrales `CK_Umbral_WarnLtCrit` (`Warn < Crit`) y `CK_Umbral_Warn_Positive` (`Warn > 0`) — además de validar, son la base de la demo de rollback transaccional.
 - **Configuración:** cadena de conexión, JWT y ruta del service account se manejan con `appsettings.Development.json` y `.env` no versionados. `docker-compose.yml` levanta Postgres + pgAdmin con volumen persistente.
 
 *(SiloGuard no maneja carga de archivos: no hay adjuntos en el dominio.)*
@@ -334,7 +336,7 @@ cambiar el modelo.
 - **Validación declarativa** con FluentValidation (11 validators) aplicada por un filtro global; **sanitización anti-XSS** de todo texto libre.
 - **Swagger/OpenAPI** permite probar la API en desarrollo con esquema Bearer.
 - **`GET /health`** permite verificar que la API esté activa sin requerir autenticación.
-- **Tests xUnit** (`dotnet test`): 12 verdes cubriendo hashing, sanitización y validators.
+- **Tests xUnit** (`dotnet test`): 12 casos verdes (9 métodos, uno de ellos `[Theory]` con 4 `[InlineData]`) cubriendo hashing BCrypt, sanitización anti-XSS y validators.
 
 ## 14. Alcance actual y pendientes razonables
 
