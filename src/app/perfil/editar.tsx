@@ -1,98 +1,37 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Spacing, FontSize, ThemeColors, Radius, FontWeight } from "../../constants/Theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
-import { ApiError } from "../../config/api";
-import { Icon } from "../../components";
+import { useToast } from "../../components/Toast";
+import { Icon, Input, Button } from "../../components";
 
 function Avatar({ name, size = 80 }: { name: string; size?: number }) {
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const { colors } = useTheme();
+  const initials = name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <View style={{ position: "relative", width: size, height: size }}>
+    <View style={{ width: size, height: size }}>
       <View
         style={{
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: "rgba(34,197,94,0.12)",
+          backgroundColor: colors.greenTint,
           borderWidth: 2,
-          borderColor: "#22C55E",
+          borderColor: colors.actionPrimary,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Text style={{ fontSize: size * 0.35, fontWeight: "700", color: "#22C55E" }}>
+        <Text style={{ fontSize: size * 0.35, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), color: colors.actionPrimary, letterSpacing: -0.5 }}>
           {initials}
         </Text>
       </View>
-      <View
-        style={{
-          position: "absolute",
-          bottom: -2,
-          right: -2,
-          width: 28,
-          height: 28,
-          borderRadius: 14,
-          backgroundColor: "#22C55E",
-          borderWidth: 2,
-          borderColor: "#0A0A0A",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Icon name="camera" size={13} color="#000" />
+      <View style={[styles.cameraBadge, { backgroundColor: colors.actionPrimary, borderColor: colors.bg }]}>
+        <Icon name="camera" size={12} color="#000" />
       </View>
-    </View>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "default",
-  colors,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: "default" | "email-address" | "phone-pad" | "numeric";
-  colors: ThemeColors;
-}) {
-  return (
-    <View style={{ gap: 6 }}>
-      <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        keyboardType={type}
-        autoCapitalize={type === "default" ? "words" : "none"}
-        style={[
-          styles.input,
-          {
-            backgroundColor: colors.surfaceInput,
-            borderColor: colors.borderDefault,
-            color: colors.textPrimary,
-          },
-        ]}
-        placeholderTextColor={colors.textSecondary}
-      />
     </View>
   );
 }
@@ -100,162 +39,97 @@ function Field({
 export default function EditarPerfilScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { profile, updateProfile } = useAppData();
+  const toast = useToast();
+  const styles2 = makeStyles(colors);
 
   const [f, setF] = useState({
-    name:     profile.name,
-    email:    profile.email,
-    phone:    profile.phone,
+    name: profile.name,
+    phone: profile.phone,
     farmName: profile.farmName,
-    farmLoc:  profile.farmLoc,
-    farmHa:   String(profile.farmHa),
+    farmLoc: profile.farmLoc,
+    farmHa: String(profile.farmHa),
   });
-  const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const set = (k: keyof typeof f, v: string) =>
-    setF((prev) => ({ ...prev, [k]: v }));
+  const set = (k: keyof typeof f) => (v: string) => setF((prev) => ({ ...prev, [k]: v }));
 
   const save = async () => {
     setSaving(true);
     try {
-      // El email no se puede editar desde acá: la cuenta se identifica por el email
-      // con el que te registraste en el backend.
       await updateProfile({
-        name:     f.name.trim() || profile.name,
-        phone:    f.phone.trim() || undefined,
+        name: f.name.trim() || profile.name,
+        phone: f.phone.trim() || undefined,
         farmName: f.farmName.trim() || profile.farmName,
-        farmLoc:  f.farmLoc.trim() || undefined,
-        farmHa:   Number(f.farmHa) || profile.farmHa,
+        farmLoc: f.farmLoc.trim() || undefined,
+        farmHa: Number(f.farmHa) || profile.farmHa,
       });
-      setSaved(true);
-      setTimeout(() => router.back(), 600);
-    } catch (error) {
-      const msg = error instanceof ApiError ? error.message : "No se pudieron guardar los cambios.";
-      Alert.alert("Error", msg);
+      toast.addToast({ tone: "ok", title: "Perfil actualizado" });
+      router.back();
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.borderDefault }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+    <View style={[styles2.container, { backgroundColor: colors.bg }]}>
+      <View style={[styles2.header, { borderBottomColor: colors.borderDefault }]}>
+        <Pressable onPress={() => router.back()} style={styles2.backBtn}>
           <Icon name="chevron-left" size={24} color={colors.actionPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Editar perfil</Text>
+        </Pressable>
+        <Text style={[styles2.headerTitle, { color: colors.textPrimary }]}>Editar perfil</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Avatar */}
-        <View style={styles.avatarRow}>
+      <ScrollView contentContainerStyle={styles2.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View style={styles2.avatarRow}>
           <Avatar name={f.name} size={80} />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-          DATOS PERSONALES
-        </Text>
-        <Field label="Nombre completo" value={f.name}  onChange={(v) => set("name", v)}  colors={colors} />
-        <Field label="Email"           value={f.email} onChange={(v) => set("email", v)} type="email-address" colors={colors} />
-        <Field label="Teléfono"        value={f.phone} onChange={(v) => set("phone", v)} type="phone-pad" colors={colors} />
+        <Text style={[styles2.sectionLabel, { color: colors.textSecondary }]}>DATOS PERSONALES</Text>
+        <Input label="Nombre completo" value={f.name} onChangeText={set("name")} autoCapitalize="words" />
+        <Input label="Email" value={profile.email} editable={false} />
+        <Input label="Teléfono" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" />
 
         <View style={{ height: 4 }} />
 
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>MI CAMPO</Text>
-        <Field label="Nombre del campo" value={f.farmName} onChange={(v) => set("farmName", v)} colors={colors} />
-        <Field label="Ubicación"        value={f.farmLoc}  onChange={(v) => set("farmLoc", v)}  colors={colors} />
-        <Field label="Hectáreas"        value={f.farmHa}   onChange={(v) => set("farmHa", v)}   type="numeric" colors={colors} />
+        <Text style={[styles2.sectionLabel, { color: colors.textSecondary }]}>MI CAMPO</Text>
+        <Input label="Nombre del campo" value={f.farmName} onChangeText={set("farmName")} autoCapitalize="words" />
+        <Input label="Ubicación" value={f.farmLoc} onChangeText={set("farmLoc")} autoCapitalize="words" />
+        <Input label="Hectáreas" value={f.farmHa} onChangeText={set("farmHa")} keyboardType="numeric" />
       </ScrollView>
 
-      {/* Footer action */}
-      <View style={[styles.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg }]}>
-        <TouchableOpacity
-          onPress={saved || saving ? undefined : save}
-          style={[
-            styles.saveBtn,
-            { backgroundColor: saved ? colors.statusOk : colors.actionPrimary },
-            (saved || saving) && { opacity: 0.85 },
-          ]}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.saveBtnText, { color: colors.actionPrimaryText }]}>
-            {saved ? "✓ Guardado" : saving ? "Guardando…" : "Guardar cambios"}
-          </Text>
-        </TouchableOpacity>
+      <View style={[styles2.footer, { borderTopColor: colors.borderDefault, backgroundColor: colors.bg, paddingBottom: Spacing.md + insets.bottom }]}>
+        <Button variant="primary" fullWidth loading={saving} onPress={save}>
+          Guardar cambios
+        </Button>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingTop: 56,
-    paddingBottom: 10,
-    paddingRight: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
+  cameraBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: FontSize.bodyLg,
-    fontWeight: "600",
-  },
-  content: {
-    padding: Spacing.md,
-    gap: 16,
-    paddingBottom: Spacing.xl,
-  },
-  avatarRow: {
-    alignItems: "center",
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginTop: 4,
-    marginBottom: -4,
-  },
-  fieldLabel: {
-    fontSize: FontSize.bodySm,
-    fontWeight: FontWeight.medium as any,
-  },
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    fontSize: FontSize.bodyMd,
-  },
-  footer: {
-    padding: Spacing.md,
-    borderTopWidth: 1,
-  },
-  saveBtn: {
-    height: 48,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveBtnText: {
-    fontSize: FontSize.bodyMd,
-    fontWeight: "700",
-    letterSpacing: 0.3,
   },
 });
+
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1 },
+    header: { flexDirection: "row", alignItems: "center", gap: 4, paddingTop: 56, paddingBottom: 10, paddingRight: Spacing.md, borderBottomWidth: 1 },
+    backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+    headerTitle: { fontSize: 17, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
+    content: { padding: Spacing.md, gap: 16, paddingBottom: Spacing.xl },
+    avatarRow: { alignItems: "center", paddingTop: 4, paddingBottom: 8 },
+    sectionLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.6, textTransform: "uppercase", marginTop: 4, marginBottom: -4 },
+    footer: { padding: Spacing.md, borderTopWidth: 1 },
+  });

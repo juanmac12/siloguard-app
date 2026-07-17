@@ -1,0 +1,11 @@
+/* SiloGuard — Elevation & glow tokens
+   Source: Figma › Foundations › Sombras (node 135:108).
+   On a near-black canvas, shadows read as soft depth halos. The green glow
+   is the brand's signature accent — used on success badges and active sensors. */
+:root {
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.30);   /* row / chip lift            */
+  --shadow-md: 0 3px 12px rgba(0, 0, 0, 0.40);  /* cards                      */
+  --shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.50);  /* sheets, modals, popovers   */
+  --glow-green: 0 4px 16px rgba(34, 197, 94, 0.30);  /* active / brand accent */
+  --glow-green-lg: 0 0 24px rgba(34, 197, 94, 0.30); /* success-state badge   */
+}

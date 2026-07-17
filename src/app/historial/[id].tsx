@@ -1,200 +1,156 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, LayoutChangeEvent } from "react-native";
-import Svg, { Rect, Line, Polyline, Circle } from "react-native-svg";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ThemeColors, Radius, Spacing } from "../../constants/Theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Spacing, ThemeColors, Radius, FontWeight, fontFamilyForWeight } from "../../constants/Theme";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useAppData } from "../../contexts/AppDataContext";
 import { siloApi } from "../../services/siloApi";
-import { LecturaResponse } from "../../services/types";
-import { Icon, IconName } from "../../components";
+import type { LecturaResponse } from "../../services/types";
+import { Icon, Tabs, ZoneChart, EmptyState } from "../../components";
+import type { Silo, SiloThresholds, ThresholdPair } from "../../contexts/AppDataContext";
 
-// El backend solo reconoce 24h/48h/7d (LecturaService.cs) — no se agrega 72h
-// acá para no mandar un rango que el servidor ignoraría silenciosamente.
-const RANGES = ["24h", "48h", "7d"] as const;
-type Range = typeof RANGES[number];
-type VarKey = "temp" | "hum" | "co2";
+type Variable = "temp" | "hum" | "co2";
+type Series = Record<Variable, number[]>;
 
-const CHART_W = 320;
-const CHART_H = 140;
-const PAGE_SIZE = 24;
-const WEEKDAY = ["D", "L", "M", "M", "J", "V", "S"];
-
-interface ChartPoint {
-  hora: string;
-  co2: number;
-  temp: number;
-  hum: number;
-}
-
-function bucketize(items: LecturaResponse[], range: Range): ChartPoint[] {
-  const chrono = [...items].reverse();
-  const bucketCount = 7;
-  const size = Math.max(1, Math.ceil(chrono.length / bucketCount));
-  const buckets: ChartPoint[] = [];
-
-  for (let i = 0; i < chrono.length; i += size) {
-    const slice = chrono.slice(i, i + size);
-    if (slice.length === 0) continue;
-    const avg = (sel: (r: LecturaResponse) => number) =>
-      slice.reduce((s, r) => s + sel(r), 0) / slice.length;
-    const last = slice[slice.length - 1];
-    const date = new Date(last.timestamp);
-    const hora = range === "7d" ? WEEKDAY[date.getDay()] : String(date.getHours()).padStart(2, "0");
-
-    buckets.push({
-      hora,
-      co2: Math.round(avg((r) => r.co2)),
-      temp: Math.round(avg((r) => r.temp) * 10) / 10,
-      hum: Math.round(avg((r) => r.hum) * 10) / 10,
-    });
-  }
-
-  return buckets.slice(-7);
-}
-
-const METRICS: Record<VarKey, {
-  label: string; unit: string; icon: IconName;
-  min: number; max: number; warn: number; crit: number;
-}> = {
-  temp: { label: "Temperatura", unit: "°C", icon: "thermometer", min: 15, max: 45, warn: 28, crit: 35 },
-  hum: { label: "Humedad", unit: "%", icon: "droplet", min: 10, max: 30, warn: 16, crit: 20 },
-  co2: { label: "CO₂", unit: "ppm", icon: "wind", min: 150, max: 1000, warn: 600, crit: 800 },
+const VCFG: Record<Variable, { label: string; icon: "thermometer" | "droplet" | "wind"; unit: string }> = {
+  temp: { label: "Temperatura", icon: "thermometer", unit: "°C" },
+  hum: { label: "Humedad", icon: "droplet", unit: "%" },
+  co2: { label: "CO₂", icon: "wind", unit: "ppm" },
 };
 
-function toneOf(value: number, m: typeof METRICS[VarKey]): "ok" | "warn" | "critical" {
-  if (value >= m.crit) return "critical";
-  if (value >= m.warn) return "warn";
-  return "ok";
+/** 168 horas + la actual: la serie completa que se pide una vez y se recorta por rango. */
+const N = 169;
+
+const RANGES = [
+  { id: "24", label: "24h", hours: 24 },
+  { id: "48", label: "48h", hours: 48 },
+  { id: "72", label: "72h", hours: 72 },
+  { id: "168", label: "7 días", hours: 168 },
+];
+
+/**
+ * Lleva las lecturas de la API a una serie horaria de 169 puntos (vieja → nueva).
+ * Los huecos se rellenan con el último valor conocido: el sensor puede saltear
+ * una hora y el gráfico necesita la grilla completa.
+ */
+function toHourly(items: LecturaResponse[]): Series | null {
+  if (items.length === 0) return null;
+
+  // La API devuelve de la más nueva a la más vieja.
+  const chrono = [...items].reverse();
+  const endMs = new Date(chrono[chrono.length - 1].timestamp).getTime();
+
+  const acc = Array.from({ length: N }, () => ({ temp: 0, hum: 0, co2: 0, n: 0 }));
+  chrono.forEach((r) => {
+    const hoursAgo = Math.round((endMs - new Date(r.timestamp).getTime()) / 3_600_000);
+    const i = N - 1 - hoursAgo;
+    if (i < 0 || i >= N) return;
+    acc[i].temp += r.temp;
+    acc[i].hum += r.hum;
+    acc[i].co2 += r.co2;
+    acc[i].n += 1;
+  });
+
+  const first = acc.find((b) => b.n > 0);
+  if (!first) return null;
+
+  const out: Series = { temp: [], hum: [], co2: [] };
+  let last = { temp: first.temp / first.n, hum: first.hum / first.n, co2: first.co2 / first.n };
+  for (const b of acc) {
+    if (b.n > 0) last = { temp: b.temp / b.n, hum: b.hum / b.n, co2: b.co2 / b.n };
+    out.temp.push(Math.round(last.temp * 10) / 10);
+    out.hum.push(Math.round(last.hum * 10) / 10);
+    out.co2.push(Math.round(last.co2));
+  }
+  return out;
 }
 
-function toneColorOf(tone: "ok" | "warn" | "critical", colors: ThemeColors) {
-  return tone === "critical" ? colors.statusCritical : tone === "warn" ? colors.statusWarn : colors.statusOk;
+function getVal(silo: Silo, v: Variable): number {
+  return v === "temp" ? silo.temp : v === "hum" ? silo.hum : silo.co2;
 }
 
-function statusMsg(tone: "ok" | "warn" | "critical", label: string) {
-  if (tone === "critical") return `${label} superó el límite crítico.`;
-  if (tone === "warn") return `${label} está por encima del umbral de advertencia.`;
-  return `${label} está dentro del rango normal.`;
+function getTone(silo: Silo, v: Variable, th: ThresholdPair): "ok" | "warn" | "critical" {
+  const val = getVal(silo, v);
+  return val >= th.crit ? "critical" : val >= th.warn ? "warn" : "ok";
 }
 
-function y(value: number, m: typeof METRICS[VarKey]) {
-  const clamped = Math.max(m.min, Math.min(m.max, value));
-  const pct = (clamped - m.min) / (m.max - m.min);
-  return CHART_H - pct * CHART_H;
+function statusMsg(tone: "ok" | "warn" | "critical", slice: number[], th: { warn: number; crit: number }): string {
+  const len = slice.length;
+  const critIdx = slice.findIndex((v) => v >= th.crit);
+  const warnIdx = slice.findIndex((v) => v >= th.warn);
+  if (tone === "critical" && critIdx >= 0 && critIdx < len - 1) return `Superó el límite hace ${len - 1 - critIdx}h`;
+  if (tone === "warn" && warnIdx >= 0 && warnIdx < len - 1) return `En advertencia hace ${len - 1 - warnIdx}h`;
+  if (tone === "ok") return "Dentro del rango seguro";
+  return "";
 }
 
-function ZoneChart({ points, varKey, colors }: { points: number[]; varKey: VarKey; colors: ThemeColors }) {
-  const m = METRICS[varKey];
-  const warnY = y(m.warn, m);
-  const critY = y(m.crit, m);
-  const stepX = points.length > 1 ? CHART_W / (points.length - 1) : 0;
-  const coords = points.map((v, i) => `${i * stepX},${y(v, m)}`).join(" ");
-  const last = points[points.length - 1] ?? m.min;
-  const lastTone = toneOf(last, m);
-
-  return (
-    <Svg width={CHART_W} height={CHART_H}>
-      {/* Zonas de fondo: verde (seguro) / ámbar (advertencia) / rojo (crítico) */}
-      <Rect x={0} y={0} width={CHART_W} height={critY} fill={colors.statusCriticalTint} />
-      <Rect x={0} y={critY} width={CHART_W} height={warnY - critY} fill={colors.statusWarnTint} />
-      <Rect x={0} y={warnY} width={CHART_W} height={CHART_H - warnY} fill={colors.statusOkTint} />
-
-      {/* Líneas de umbral */}
-      <Line x1={0} y1={warnY} x2={CHART_W} y2={warnY} stroke={colors.statusWarn} strokeWidth={1} strokeDasharray="4,4" />
-      <Line x1={0} y1={critY} x2={CHART_W} y2={critY} stroke={colors.statusCritical} strokeWidth={1} strokeDasharray="4,4" />
-
-      {/* Línea de datos */}
-      {points.length > 1 && (
-        <Polyline points={coords} fill="none" stroke={colors.textPrimary} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-      )}
-
-      {/* Punto del valor actual */}
-      {points.length > 0 && (
-        <Circle cx={(points.length - 1) * stepX} cy={y(last, m)} r={5} fill={toneColorOf(lastTone, colors)} stroke={colors.bg} strokeWidth={2} />
-      )}
-    </Svg>
-  );
-}
-
-function VariablePanel({
-  varKey, points, items, onLayout,
-}: {
-  varKey: VarKey;
-  points: number[];
-  items: number[];
-  onLayout: (e: LayoutChangeEvent) => void;
+function VariablePanel({ variable, silo, data, thresholds, timeRangeHours, colors, styles }: {
+  variable: Variable;
+  silo: Silo;
+  data: Series;
+  thresholds: SiloThresholds;
+  timeRangeHours: number;
+  colors: ThemeColors;
+  styles: ReturnType<typeof makeStyles>;
 }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => panelStyles(colors), [colors]);
-  const m = METRICS[varKey];
-  const current = points[points.length - 1] ?? 0;
-  const tone = toneOf(current, m);
-  const toneColor = toneColorOf(tone, colors);
-  const toneTint = tone === "critical" ? colors.statusCriticalTint : tone === "warn" ? colors.statusWarnTint : colors.statusOkTint;
-  const toneLabel = tone === "critical" ? "Crítico" : tone === "warn" ? "Advertencia" : "Normal";
+  const cfg = VCFG[variable];
+  const th = thresholds[variable];
+  const slice = data[variable].slice(N - 1 - timeRangeHours);
+  const cv = getVal(silo, variable);
+  const tone = getTone(silo, variable, th);
+  const hex = tone === "critical" ? colors.statusCritical : tone === "warn" ? colors.statusWarn : colors.statusOk;
+  const msg = statusMsg(tone, slice, th);
 
-  const min = items.length ? Math.min(...items) : 0;
-  const max = items.length ? Math.max(...items) : 0;
-  const avg = items.length ? items.reduce((s, v) => s + v, 0) / items.length : 0;
-  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  const mn = Math.min(...slice).toFixed(1);
+  const mx = Math.max(...slice).toFixed(1);
+  const avg = (slice.reduce((a, b) => a + b, 0) / slice.length).toFixed(1);
+  const toneLabel = tone === "critical" ? "CRÍTICO" : tone === "warn" ? "ADVERTENCIA" : "OK";
 
   return (
-    <View style={styles.card} onLayout={onLayout}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.iconWrap, { backgroundColor: toneTint }]}>
-            <Icon name={m.icon} size={16} color={toneColor} />
+    <View style={[styles.panel, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, borderTopColor: hex }]}>
+      <View style={styles.panelHeader}>
+        <View style={{ gap: 6, flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            <Icon name={cfg.icon} size={15} color={colors.textSecondary} />
+            <Text style={[styles.panelLabel, { color: colors.textSecondary }]}>{cfg.label}</Text>
           </View>
-          <View>
-            <Text style={styles.label}>{m.label}</Text>
-            <Text style={[styles.value, { color: colors.textPrimary }]}>
-              {fmt(current)}<Text style={styles.unit}> {m.unit}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+            <View style={[styles.dot, { backgroundColor: hex }]} />
+            <Text style={[styles.toneLabel, { color: hex }]}>{toneLabel}</Text>
+            {msg ? <Text style={[styles.msg, { color: colors.textMuted }]}>· {msg}</Text> : null}
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3, marginLeft: 12 }}>
+          <Text style={[styles.panelValue, { color: colors.textPrimary }]}>{cv}</Text>
+          <Text style={[styles.panelUnit, { color: colors.textSecondary }]}>{cfg.unit}</Text>
+        </View>
+      </View>
+
+      <View style={{ paddingHorizontal: 8, paddingBottom: 4 }}>
+        <ZoneChart slice={slice} warn={th.warn} crit={th.crit} timeRange={timeRangeHours} />
+      </View>
+
+      <View style={[styles.legendRow, { borderTopColor: colors.borderDefault, backgroundColor: colors.surfaceApp }]}>
+        {([["Seguro", colors.statusOk], ["Advertencia", colors.statusWarn], ["Crítico", colors.statusCritical]] as [string, string][]).map(([l, cHex]) => (
+          <View key={l} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: cHex, opacity: 0.7 }} />
+            <Text style={[styles.legendText, { color: colors.textMuted }]}>{l}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={[styles.statsRow, { borderTopColor: colors.borderDefault }]}>
+        {([["Mín", mn], ["Máx", mx], ["Prom", avg]] as [string, string][]).map(([label, val], i) => (
+          <View key={label} style={[styles.statCol, i < 2 ? { borderRightWidth: 1, borderRightColor: colors.borderDefault } : null]}>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>{label}</Text>
+            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+              {val}
+              <Text style={[styles.statUnit, { color: colors.textSecondary }]}> {cfg.unit}</Text>
             </Text>
           </View>
-        </View>
-        <View style={[styles.toneChip, { backgroundColor: toneTint }]}>
-          <Text style={[styles.toneChipText, { color: toneColor }]}>{toneLabel}</Text>
-        </View>
+        ))}
       </View>
-
-      <Text style={styles.statusMsg}>{statusMsg(tone, m.label)}</Text>
-
-      <View style={styles.chartWrap}>
-        <ZoneChart points={points} varKey={varKey} colors={colors} />
-      </View>
-
-      <View style={styles.legendRow}>
-        <LegendDot color={colors.statusOk} label="Seguro" />
-        <LegendDot color={colors.statusWarn} label="Advertencia" />
-        <LegendDot color={colors.statusCritical} label="Crítico" />
-      </View>
-
-      <View style={styles.statsRow}>
-        <Stat label="Mín" value={`${fmt(min)} ${m.unit}`} />
-        <Stat label="Máx" value={`${fmt(max)} ${m.unit}`} />
-        <Stat label="Prom" value={`${fmt(avg)} ${m.unit}`} />
-      </View>
-    </View>
-  );
-}
-
-function LegendDot({ color, label }: { color: string; label: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-      <Text style={{ fontSize: 11, color: colors.textSecondary }}>{label}</Text>
-    </View>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flex: 1, alignItems: "center" }}>
-      <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</Text>
-      <Text style={{ fontSize: 14, color: colors.textPrimary, fontWeight: "700", marginTop: 2 }}>{value}</Text>
     </View>
   );
 }
@@ -202,134 +158,88 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function HistorialScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { silos } = useAppData();
+  const insets = useSafeAreaInsets();
+  const { silos, thresholdsFor } = useAppData();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { id, variable } = useLocalSearchParams<{ id: string; variable?: VarKey }>();
-  const [range, setRange] = useState<Range>("48h");
-  const [items, setItems] = useState<LecturaResponse[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const scrollRef = useRef<ScrollView>(null);
-  const panelY = useRef<Record<VarKey, number>>({ temp: 0, hum: 0, co2: 0 });
-  const didScrollToVariable = useRef(false);
+  const { id, variable } = useLocalSearchParams<{ id: string; variable?: string }>();
+  const [range, setRange] = useState<string>("48");
 
   const silo = silos.find((s) => s.id === Number(id));
-  const siloName = silo?.name ?? `Silo ${id}`;
 
+  const [data, setData] = useState<Series | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "empty">("loading");
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setPage(1);
+    if (!silo) return;
+    let alive = true;
+    setState("loading");
+    // Se piden los 7 días una sola vez y cada rango se recorta acá. Además de
+    // ahorrar requests al cambiar de tab, hace que 72h funcione: la API solo
+    // acepta 24h/48h/7d.
     siloApi
-      .getLecturas(Number(id), range, 1, PAGE_SIZE)
+      .getLecturas(silo.id, "7d", 1, 200)
       .then((res) => {
-        setItems(res.items);
-        setTotalPages(res.totalPages);
-        setTotalCount(res.totalCount);
+        if (!alive) return;
+        const hourly = toHourly(res.items);
+        setData(hourly);
+        setState(hourly ? "ready" : "empty");
       })
       .catch(() => {
-        setItems([]);
-        setTotalPages(1);
-        setTotalCount(0);
-      })
-      .finally(() => setLoading(false));
-  }, [id, range]);
+        if (!alive) return;
+        setData(null);
+        setState("empty");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [silo?.id]);
 
-  const loadMore = async () => {
-    if (loadingMore || page >= totalPages) return;
-    setLoadingMore(true);
-    try {
-      const nextPage = page + 1;
-      const res = await siloApi.getLecturas(Number(id), range, nextPage, PAGE_SIZE);
-      setItems((prev) => [...prev, ...res.items]);
-      setPage(nextPage);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  if (!silo) return null;
 
-  const data = useMemo(() => bucketize(items, range), [items, range]);
-  const tempPoints = data.map((d) => d.temp);
-  const humPoints = data.map((d) => d.hum);
-  const co2Points = data.map((d) => d.co2);
-  const tempItems = items.map((r) => r.temp);
-  const humItems = items.map((r) => r.hum);
-  const co2Items = items.map((r) => r.co2);
-
-  const handlePanelLayout = (key: VarKey) => (e: LayoutChangeEvent) => {
-    panelY.current[key] = e.nativeEvent.layout.y;
-    if (!didScrollToVariable.current && variable === key) {
-      didScrollToVariable.current = true;
-      setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, panelY.current[key] - 12), animated: true }), 200);
-    }
-  };
+  const thresholds = thresholdsFor(silo.id);
+  const timeRangeHours = RANGES.find((r) => r.id === range)?.hours ?? 48;
+  const order: Variable[] = variable === "hum" ? ["hum", "temp", "co2"] : variable === "co2" ? ["co2", "temp", "hum"] : ["temp", "hum", "co2"];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="chevron-left" size={24} color={colors.actionPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Historial — {siloName}</Text>
+        </Pressable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>Historial de sensores</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>{silo.name} · {silo.grain}</Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Icon name="wifi" size={12} color={colors.textMuted} />
+          <Text style={styles.lastSync}>{silo.lastUpdate}</Text>
+        </View>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[styles.infoBanner, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
-          <Icon name="info" size={15} color={colors.textSecondary} />
-          <Text style={[styles.infoBannerText, { color: colors.textSecondary }]}>
-            Las zonas verde, ámbar y roja marcan el rango seguro, de advertencia y crítico para cada variable.
+      <View style={[styles.rangeWrap, { borderBottomColor: colors.borderDefault }]}>
+        <Tabs variant="pill" fullWidth activeId={range} onChange={setRange} items={RANGES.map((r) => ({ id: r.id, label: r.label }))} />
+      </View>
+
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom }]} showsVerticalScrollIndicator={false}>
+        <View style={[styles.hint, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
+          <Icon name="info" size={14} color={colors.textMuted} />
+          <Text style={[styles.hintText, { color: colors.textMuted }]}>
+            Las bandas de color muestran las <Text style={{ color: colors.textSecondary, fontWeight: FontWeight.semibold }}>zonas segura, de advertencia y crítica</Text>. La línea es el recorrido del sensor en el período elegido.
           </Text>
         </View>
 
-        {/* Range selector */}
-        <View style={styles.rangeRow}>
-          {RANGES.map((r) => (
-            <TouchableOpacity
-              key={r}
-              onPress={() => setRange(r)}
-              style={[styles.rangeTab, { backgroundColor: range === r ? colors.actionPrimary : colors.surfaceCard, borderColor: range === r ? colors.actionPrimary : colors.borderDefault }]}
-            >
-              <Text style={[styles.rangeText, { color: range === r ? colors.actionPrimaryText : colors.textSecondary }]}>{r}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {loading ? (
-          <Text style={{ color: colors.textSecondary, textAlign: "center", paddingVertical: 40 }}>Cargando…</Text>
-        ) : data.length === 0 ? (
-          <Text style={{ color: colors.textSecondary, textAlign: "center", paddingVertical: 40 }}>
-            Todavía no hay datos para este período.
-          </Text>
+        {state === "loading" ? (
+          <ActivityIndicator color={colors.actionPrimary} style={{ marginTop: 32 }} />
+        ) : !data ? (
+          <EmptyState
+            variant="empty"
+            size="sm"
+            title="Sin lecturas todavía"
+            body="Cuando la lanza mande datos, vas a ver el historial acá."
+          />
         ) : (
-          <View style={{ gap: 16 }}>
-            <VariablePanel varKey="temp" points={tempPoints} items={tempItems} onLayout={handlePanelLayout("temp")} />
-            <VariablePanel varKey="hum" points={humPoints} items={humItems} onLayout={handlePanelLayout("hum")} />
-            <VariablePanel varKey="co2" points={co2Points} items={co2Items} onLayout={handlePanelLayout("co2")} />
-          </View>
-        )}
-
-        {/* Paginado real contra /api/silos/{id}/lecturas */}
-        {totalCount > 0 && (
-          <View style={styles.pagingBox}>
-            <Text style={[styles.pagingText, { color: colors.textSecondary }]}>
-              Mostrando {items.length} de {totalCount} lecturas (página {page} de {totalPages})
-            </Text>
-            {page < totalPages && (
-              <TouchableOpacity
-                onPress={loadMore}
-                disabled={loadingMore}
-                style={[styles.loadMoreBtn, { borderColor: colors.borderDefault, opacity: loadingMore ? 0.6 : 1 }]}
-              >
-                <Text style={[styles.loadMoreText, { color: colors.actionPrimary }]}>
-                  {loadingMore ? "Cargando…" : "Cargar más lecturas"}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          order.map((v) => (
+            <VariablePanel key={v} variable={v} silo={silo} data={data} thresholds={thresholds} timeRangeHours={timeRangeHours} colors={colors} styles={styles} />
+          ))
         )}
       </ScrollView>
     </View>
@@ -340,50 +250,42 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
     header: {
-      flexDirection: "row", alignItems: "center", gap: 4,
-      paddingTop: 56, paddingBottom: 10, paddingHorizontal: 8,
-      borderBottomWidth: 1, borderBottomColor: c.borderDefault,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingTop: 56,
+      paddingBottom: 10,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderDefault,
     },
     backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-    headerTitle: { flex: 1, fontSize: 17, fontWeight: "700", color: c.textPrimary },
+    headerTitle: { fontSize: 17, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold), color: c.textPrimary },
+    headerSub: { fontSize: 12, color: c.textSecondary, marginTop: 1, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    lastSync: { fontSize: 11, color: c.textMuted, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-    scroll: { padding: 16, paddingBottom: 40 },
+    rangeWrap: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
 
-    infoBanner: {
-      flexDirection: "row", alignItems: "flex-start", gap: 10,
-      padding: 12, borderRadius: Radius.md, borderWidth: 1, marginBottom: 16,
-    },
-    infoBannerText: { flex: 1, fontSize: 12, lineHeight: 18 },
+    scroll: { padding: 16, paddingTop: 14, gap: 14, paddingBottom: 32 },
 
-    rangeRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
-    rangeTab: {
-      paddingHorizontal: 20, paddingVertical: 9,
-      borderRadius: Radius.full, borderWidth: 1,
-    },
-    rangeText: { fontSize: 13, fontWeight: "600" },
+    hint: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 10, borderRadius: Radius.md, borderWidth: 1, marginBottom: 14 },
+    hintText: { flex: 1, fontSize: 12, lineHeight: 18, fontFamily: fontFamilyForWeight(FontWeight.regular) },
 
-    pagingBox: { alignItems: "center", gap: 10, paddingTop: 20 },
-    pagingText: { fontSize: 12 },
-    loadMoreBtn: { borderWidth: 1, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
-    loadMoreText: { fontSize: 13, fontWeight: "600" },
-  });
+    panel: { borderRadius: Radius.lg, borderWidth: 1, borderTopWidth: 3, overflow: "hidden", marginBottom: 14 },
+    panelHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", padding: 14, paddingBottom: 10 },
+    panelLabel: { fontSize: 13, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold), letterSpacing: 0.2 },
+    dot: { width: 7, height: 7, borderRadius: 3.5 },
+    toneLabel: { fontSize: 11, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.5 },
+    msg: { fontSize: 11, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    panelValue: { fontSize: 30, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: -1, lineHeight: 32 },
+    panelUnit: { fontSize: 13, fontWeight: FontWeight.medium, fontFamily: fontFamilyForWeight(FontWeight.medium) },
 
-const panelStyles = (c: ThemeColors) =>
-  StyleSheet.create({
-    card: {
-      backgroundColor: c.surfaceCard, borderWidth: 1, borderColor: c.borderDefault,
-      borderRadius: Radius.lg, padding: 14, gap: 12,
-    },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-    iconWrap: { width: 32, height: 32, borderRadius: Radius.md, alignItems: "center", justifyContent: "center" },
-    label: { fontSize: 12, color: c.textSecondary, fontWeight: "600" },
-    value: { fontSize: 20, fontWeight: "700", letterSpacing: -0.3 },
-    unit: { fontSize: 12, fontWeight: "600", color: c.textSecondary },
-    toneChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full },
-    toneChipText: { fontSize: 11, fontWeight: "700" },
-    statusMsg: { fontSize: 12, color: c.textSecondary, lineHeight: 18 },
-    chartWrap: { alignItems: "center" },
-    legendRow: { flexDirection: "row", justifyContent: "center", gap: 16 },
-    statsRow: { flexDirection: "row", borderTopWidth: 1, borderTopColor: c.borderDefault, paddingTop: 10 },
+    legendRow: { flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1 },
+    legendText: { fontSize: 10, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+
+    statsRow: { flexDirection: "row", borderTopWidth: 1 },
+    statCol: { flex: 1, paddingVertical: 10, alignItems: "center" },
+    statLabel: { fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, fontFamily: fontFamilyForWeight(FontWeight.regular), marginBottom: 3 },
+    statValue: { fontSize: 14, fontWeight: FontWeight.bold, fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: -0.3 },
+    statUnit: { fontSize: 11, fontWeight: FontWeight.regular, fontFamily: fontFamilyForWeight(FontWeight.regular) },
   });

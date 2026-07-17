@@ -1,5 +1,5 @@
 import { apiFetch } from "../config/api";
-import { PerfilResponse } from "./types";
+import { PerfilResponse, PreferenciasResponse } from "./types";
 
 export interface PerfilUpdatePayload {
   name: string;
@@ -19,5 +19,14 @@ export const perfilApi = {
     apiFetch<void>("/perfil/password", {
       method: "PUT",
       body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  getPreferencias: () => apiFetch<PreferenciasResponse>("/perfil/notificaciones"),
+
+  // El PUT reemplaza las 4 preferencias, así que hay que mandarlas completas.
+  updatePreferencias: (payload: PreferenciasResponse) =>
+    apiFetch<PreferenciasResponse>("/perfil/notificaciones", {
+      method: "PUT",
+      body: JSON.stringify(payload),
     }),
 };

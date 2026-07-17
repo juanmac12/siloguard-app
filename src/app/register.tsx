@@ -1,199 +1,187 @@
-import { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { auth } from "../config/firebase";
-import { ApiError } from "../config/api";
 import { useAppData } from "../contexts/AppDataContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { Spacing, FontSize, Radius, ThemeColors } from "../constants/Theme";
-import { Button, Input, AuthHeader, AuthStepDots, Icon } from "../components";
+import { AuthHeader, Button, Checkbox, Icon, Input, StepDots } from "../components";
+import { FontWeight, ThemeColors, fontFamilyForWeight } from "../constants/Theme";
 
-function firebaseErrorMessage(code: string): string {
-  switch (code) {
-    case "auth/email-already-in-use":
-      return "Ya existe una cuenta con ese email.";
-    case "auth/invalid-email":
-      return "El email no es válido.";
-    case "auth/weak-password":
-      return "La contraseña es muy débil. Usá al menos 8 caracteres.";
-    default:
-      return "Ocurrió un error. Intentá de nuevo.";
-  }
+function RuleRow({ ok, label }: { ok: boolean; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={ruleStyles.row}>
+      <Icon name="check-circle" size={14} color={ok ? colors.statusOk : colors.textSecondary} />
+      <Text style={[ruleStyles.label, { color: ok ? colors.statusOk : colors.textSecondary }]}>{label}</Text>
+    </View>
+  );
 }
 
-const passwordRules = (password: string) => ({
-  length: password.length >= 8,
-  uppercase: /[A-Z]/.test(password),
-  number: /[0-9]/.test(password),
+const ruleStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  label: { fontSize: 12 },
 });
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register } = useAppData();
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { register } = useAppData();
+  const styles = makeStyles(colors);
 
-  const [step, setStep] = useState(0); // 0: datos, 1: establecimiento
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     nombre: "",
     email: "",
     telefono: "",
+    password: "",
     establecimiento: "",
     localidad: "",
-    password: "",
+    accepted: false,
   });
 
-  const updateField = (key: string, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
+  const update = (key: keyof typeof form, value: string | boolean) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const rules = passwordRules(form.password);
-  const passwordValid = rules.length && rules.uppercase && rules.number;
+  const ruleLen = form.password.length >= 8;
+  const ruleUpper = /[A-Z]/.test(form.password);
+  const ruleNum = /[0-9]/.test(form.password);
+  const emailOk = /\S+@\S+\.\S+/.test(form.email);
+  const step1Valid = !!(form.nombre.trim() && emailOk && form.telefono.trim() && ruleLen && ruleUpper && ruleNum);
+  const step2Valid = !!(form.establecimiento.trim() && form.localidad.trim() && form.accepted);
 
-  const handleNext = () => {
-    if (!form.nombre.trim() || !form.email.trim()) {
-      Alert.alert("Error", "Completá tu nombre y email.");
-      return;
-    }
-    if (!passwordValid) {
-      Alert.alert("Error", "La contraseña no cumple los requisitos.");
-      return;
-    }
-    setStep(1);
-  };
-
-  const handleRegister = async () => {
-    if (!form.establecimiento.trim()) {
-      Alert.alert("Error", "Completá el nombre de tu establecimiento.");
-      return;
-    }
-    if (!acceptedTerms) {
-      Alert.alert("Error", "Tenés que aceptar los Términos y condiciones.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const credential = await createUserWithEmailAndPassword(
-        auth,
-        form.email.trim(),
-        form.password
-      );
-      await sendEmailVerification(credential.user);
-
-      try {
-        await register({
-          name: form.nombre.trim(),
-          email: form.email.trim(),
-          password: form.password,
-          phone: form.telefono.trim() || undefined,
-          farmName: form.establecimiento.trim(),
-          farmLoc: form.localidad.trim() || undefined,
-        });
-      } catch (backendError) {
-        // La cuenta de Firebase ya se creó — si el backend falla (ej. email
-        // duplicado en la base propia) la deshacemos para poder reintentar.
-        await credential.user.delete().catch(() => {});
-        throw backendError;
-      }
-
-      router.replace({ pathname: "/verificar-email", params: { email: form.email.trim() } });
-    } catch (error: any) {
-      const msg =
-        error instanceof ApiError
-          ? error.message
-          : typeof error?.code === "string"
-            ? firebaseErrorMessage(error.code)
-            : "Ocurrió un error. Intentá de nuevo.";
-      Alert.alert("Error", msg);
-    } finally {
-      setLoading(false);
-    }
+  const goStep2 = () => {
+    if (!step1Valid) return;
+    setStep(2);
   };
 
   const handleBack = () => {
-    if (step === 1) {
-      setStep(0);
+    if (step === 2) {
+      setStep(1);
     } else {
       router.back();
     }
   };
 
+  const submit = async () => {
+    if (!step2Valid || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      await register({
+        name: form.nombre.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        phone: form.telefono.trim(),
+        farmName: form.establecimiento.trim(),
+        farmLoc: form.localidad.trim(),
+      });
+      router.replace(`/verificar-email?email=${encodeURIComponent(form.email.trim())}`);
+    } catch {
+      setError("Este email ya está registrado. ¿Querés iniciar sesión?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <AuthHeader title="Crear cuenta" showBack onBack={handleBack} />
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <AuthStepDots total={2} active={step} />
-
-        {step === 0 ? (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <AuthHeader title="Crear cuenta" onBack={handleBack} />
+      <View style={styles.dotsRow}>
+        <StepDots total={2} active={step - 1} />
+      </View>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {step === 1 ? (
           <>
-            <Text style={styles.stepCaption}>Paso 1 de 2 — Tus datos</Text>
+            <Text style={styles.stepLabel}>PASO 1 DE 2 — TUS DATOS</Text>
             <View style={styles.form}>
-              <Input label="Nombre completo" placeholder="Juan Pérez" value={form.nombre} onChangeText={(v) => updateField("nombre", v)} autoCorrect={false} />
-              <Input label="Email" placeholder="juan@email.com" value={form.email} onChangeText={(v) => updateField("email", v)} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
-              <Input label="Teléfono" placeholder="+54 9 341 555-0123" value={form.telefono} onChangeText={(v) => updateField("telefono", v)} keyboardType="phone-pad" autoCorrect={false} />
-              <Input label="Contraseña" placeholder="Mínimo 8 caracteres" value={form.password} onChangeText={(v) => updateField("password", v)} secureTextEntry autoCapitalize="none" autoCorrect={false} />
-
-              <View style={styles.rulesBox}>
-                <PasswordRule ok={rules.length} label="Al menos 8 caracteres" colors={colors} />
-                <PasswordRule ok={rules.uppercase} label="Una mayúscula" colors={colors} />
-                <PasswordRule ok={rules.number} label="Un número" colors={colors} />
-              </View>
+              <Input label="NOMBRE COMPLETO" placeholder="Juan Pérez" value={form.nombre} onChangeText={(v) => update("nombre", v)} autoCorrect={false} />
+              <Input
+                label="EMAIL"
+                placeholder="juan@email.com"
+                value={form.email}
+                onChangeText={(v) => update("email", v)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Input
+                label="TELÉFONO"
+                placeholder="+54 9 341 555-0123"
+                value={form.telefono}
+                onChangeText={(v) => update("telefono", v)}
+                keyboardType="phone-pad"
+                autoCorrect={false}
+              />
+              <Input
+                label="CONTRASEÑA"
+                placeholder="Mínimo 8 caracteres"
+                value={form.password}
+                onChangeText={(v) => update("password", v)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                trailingIcon={
+                  <Pressable onPress={() => setShowPassword((s) => !s)} hitSlop={8}>
+                    <Icon name={showPassword ? "eye-off" : "eye"} size={18} color={colors.textMuted} />
+                  </Pressable>
+                }
+              />
             </View>
 
-            <Button variant="primary" fullWidth onPress={handleNext} style={styles.submit}>
-              Siguiente
-            </Button>
+            <View style={styles.rules}>
+              <RuleRow ok={ruleLen} label="Mínimo 8 caracteres" />
+              <RuleRow ok={ruleUpper} label="Al menos 1 mayúscula" />
+              <RuleRow ok={ruleNum} label="Al menos 1 número" />
+            </View>
 
-            <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>¿Ya tenés cuenta? </Text>
-              <Pressable onPress={() => router.replace("/login")}>
-                <Text style={styles.loginLink}>Iniciá sesión</Text>
+            <View style={styles.submitWrap}>
+              <Button variant="primary" fullWidth disabled={!step1Valid} onPress={goStep2}>
+                Siguiente
+              </Button>
+            </View>
+
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>¿Ya tenés cuenta? </Text>
+              <Pressable onPress={() => router.push("/login")}>
+                <Text style={styles.footerLink}>Iniciá sesión</Text>
               </Pressable>
             </View>
           </>
         ) : (
           <>
-            <Text style={styles.stepCaption}>Paso 2 de 2 — Tu establecimiento</Text>
+            <Text style={styles.stepLabel}>PASO 2 DE 2 — TU ESTABLECIMIENTO</Text>
             <View style={styles.form}>
-              <Input label="Establecimiento" placeholder="Estancia La Esperanza" value={form.establecimiento} onChangeText={(v) => updateField("establecimiento", v)} autoCorrect={false} />
-              <Input label="Localidad / Provincia" placeholder="Pergamino, Buenos Aires" value={form.localidad} onChangeText={(v) => updateField("localidad", v)} autoCorrect={false} />
+              <Input
+                label="ESTABLECIMIENTO"
+                placeholder="Estancia La Esperanza"
+                value={form.establecimiento}
+                onChangeText={(v) => update("establecimiento", v)}
+                editable={!loading}
+                autoCorrect={false}
+              />
+              <Input
+                label="LOCALIDAD / PROVINCIA"
+                placeholder="Pergamino, Buenos Aires"
+                value={form.localidad}
+                onChangeText={(v) => update("localidad", v)}
+                editable={!loading}
+                autoCorrect={false}
+              />
             </View>
 
-            <Pressable style={styles.checkboxRow} onPress={() => setAcceptedTerms((v) => !v)}>
-              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
-                {acceptedTerms ? <Icon name="check" size={14} color={colors.actionPrimaryText} /> : null}
-              </View>
-              <Text style={styles.checkboxLabel}>Acepto los Términos y condiciones</Text>
-            </Pressable>
+            <View style={styles.checkboxRow}>
+              <Checkbox checked={form.accepted} onChange={(v) => update("accepted", v)} disabled={loading} label="Acepto los Términos y condiciones" />
+            </View>
 
-            <Button variant="primary" fullWidth loading={loading} onPress={handleRegister} style={styles.submit}>
-              Crear cuenta
-            </Button>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <Text style={styles.note}>
-              Al registrarte vas a recibir un email para verificar tu cuenta.
-            </Text>
+            <View style={styles.submitWrap}>
+              <Button variant="primary" fullWidth disabled={!step2Valid} loading={loading} onPress={submit}>
+                {loading ? "Creando cuenta…" : "Crear cuenta"}
+              </Button>
+            </View>
+            <Text style={styles.smallPrint}>Al registrarte vas a recibir un email para verificar tu cuenta.</Text>
           </>
         )}
       </ScrollView>
@@ -201,42 +189,26 @@ export default function RegisterScreen() {
   );
 }
 
-function PasswordRule({ ok, label, colors }: { ok: boolean; label: string; colors: ThemeColors }) {
-  return (
-    <View style={ruleStyles.row}>
-      <Icon name={ok ? "check-circle" : "x-circle"} size={14} color={ok ? colors.statusOk : colors.textSecondary} />
-      <Text style={[ruleStyles.text, { color: ok ? colors.statusOk : colors.textSecondary }]}>{label}</Text>
-    </View>
-  );
-}
-
-const ruleStyles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  text: { fontSize: 12 },
-});
-
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
-    scroll: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.xxl },
-    stepCaption: { color: c.textSecondary, fontSize: FontSize.bodySm, fontWeight: "600", marginBottom: Spacing.md },
-    form: { gap: Spacing.md },
-    rulesBox: { gap: 4, marginTop: -4 },
-    submit: { marginTop: Spacing.lg, marginBottom: Spacing.lg },
-    loginContainer: { flexDirection: "row", justifyContent: "center" },
-    loginText: { color: c.textMuted, fontSize: FontSize.bodySm },
-    loginLink: { color: c.primary, fontSize: FontSize.bodySm, fontWeight: "600" },
-    checkboxRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: Spacing.lg },
-    checkbox: {
-      width: 20,
-      height: 20,
-      borderRadius: Radius.xs,
-      borderWidth: 1.5,
-      borderColor: c.borderStrong,
-      alignItems: "center",
-      justifyContent: "center",
+    dotsRow: { alignItems: "center", paddingVertical: 16 },
+    scroll: { padding: 24, paddingTop: 8, flexGrow: 1 },
+    stepLabel: {
+      fontSize: 12,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+      color: c.textSecondary,
+      marginBottom: 20,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
     },
-    checkboxChecked: { backgroundColor: c.actionPrimary, borderColor: c.actionPrimary },
-    checkboxLabel: { color: c.textPrimary, fontSize: FontSize.bodySm, flexShrink: 1 },
-    note: { color: c.textMuted, fontSize: FontSize.bodySm, textAlign: "center", marginTop: Spacing.md, lineHeight: 18 },
+    form: { gap: 16 },
+    rules: { gap: 8, marginTop: 14 },
+    submitWrap: { marginTop: 28 },
+    footerRow: { flexDirection: "row", justifyContent: "center", marginTop: 20 },
+    footerText: { fontSize: 14, color: c.textSecondary, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    footerLink: { fontSize: 14, color: c.textLink, fontWeight: FontWeight.semibold, fontFamily: fontFamilyForWeight(FontWeight.semibold) },
+    checkboxRow: { marginTop: 20 },
+    errorText: { fontSize: 12, color: c.statusCritical, marginTop: 16, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    smallPrint: { fontSize: 11, lineHeight: 16, color: c.textSecondary, textAlign: "center", marginTop: 16, fontFamily: fontFamilyForWeight(FontWeight.regular) },
   });

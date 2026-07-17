@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="../../styles.css">
+</helmet>
+<div style="height:54px; padding:0 8px; display:flex; align-items:center; gap:2px; background:var(--surface-card); border-bottom:1px solid var(--border-default); flex-shrink:0; box-sizing:border-box;">
+  <sc-if value="{{ showBack }}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{ onBack }}" aria-label="Volver" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:transparent; border:none; border-radius:var(--radius-md); cursor:pointer; color:var(--text-primary); padding:0; flex-shrink:0;">
+      <x-import component-from-global-scope="SiloGuardDesignSystem_633342.Icon" name="chevron-left" size="22" hint-size="22,22"></x-import>
+    </button>
+  </sc-if>
+  <h1 style="margin:0; padding-left:8px; font-family:var(--font-sans); font-size:var(--text-h3); line-height:var(--lh-h3); font-weight:var(--fw-semibold); color:var(--text-primary); letter-spacing:var(--ls-h3);">{{ title }}</h1>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:54},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Iniciar sesión&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showBack&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onBack&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      title: this.props.title ?? 'Título',
+      showBack: this.props.showBack ?? true,
+      onBack: this.props.onBack ?? (() => {}),
+    };
+  }
+}
+</script>
+</body>
+</html>

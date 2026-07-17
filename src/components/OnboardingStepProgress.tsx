@@ -1,27 +1,28 @@
 /**
- * OnboardingStepProgress — círculos numerados + conector + caption.
- * Usado en "Vincular lanza": trata QR + WiFi como paso 1 y datos del silo como paso 2.
- * `step` es 1-based.
+ * OnboardingStepProgress — círculos numerados + líneas conectoras, con
+ * caption. Usado en los sub-pasos de "Vincular lanza" (QR → WiFi → Asignación).
  */
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Type, ThemeColors } from '../constants/Theme';
+import { StyleSheet, Text, View } from 'react-native';
+import { FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 
-type Props = {
-  step: number; // 1-based
+export function OnboardingStepProgress({
+  step,
+  total,
+  caption,
+}: {
+  step: number;
   total: number;
-  caption?: string;
-};
-
-export function OnboardingStepProgress({ step, total, caption }: Props) {
+  caption: string;
+}) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const nodes: React.ReactNode[] = [];
+  const items: React.ReactNode[] = [];
   for (let n = 1; n <= total; n++) {
     const filled = step >= n;
-    nodes.push(
+    items.push(
       <View
         key={`c${n}`}
         style={[
@@ -32,50 +33,63 @@ export function OnboardingStepProgress({ step, total, caption }: Props) {
           },
         ]}
       >
-        <Text style={[styles.circleText, { color: filled ? '#FFFFFF' : colors.textSecondary }]}>
-          {n}
-        </Text>
+        <Text style={[styles.circleLabel, { color: filled ? '#FFFFFF' : colors.textSecondary }]}>{n}</Text>
       </View>
     );
     if (n < total) {
       const lineFilled = step > n;
-      nodes.push(
+      items.push(
         <View
           key={`l${n}`}
-          style={[
-            styles.line,
-            { backgroundColor: lineFilled ? colors.actionPrimary : colors.surfaceInput },
-          ]}
+          style={[styles.line, { backgroundColor: lineFilled ? colors.actionPrimary : colors.surfaceInput }]}
         />
       );
     }
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.row}>{nodes}</View>
-      {caption ? <Text style={styles.caption}>{caption}</Text> : null}
+    <View style={styles.wrap}>
+      <View style={styles.row}>{items}</View>
+      <Text style={styles.caption}>{caption}</Text>
     </View>
   );
 }
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
-    container: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 8 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+    wrap: {
+      paddingHorizontal: 24,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 6,
+    },
     circle: {
       width: 28,
       height: 28,
-      borderRadius: 999,
+      borderRadius: 14,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    circleText: { fontSize: 12, fontWeight: '700', lineHeight: 14 },
-    line: { flex: 1, height: 2, borderRadius: 2 },
+    circleLabel: {
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
+    },
+    line: {
+      flex: 1,
+      height: 2,
+      borderRadius: 2,
+    },
     caption: {
-      fontSize: Type.caption.fontSize,
+      fontSize: 12,
       color: c.textSecondary,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
     },
   });
 

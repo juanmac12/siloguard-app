@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Dimensions, ScrollView, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
-import { Button, Icon, IconName } from "../components";
-import { Type } from "../constants/Theme";
-
-const { width: SCREEN_W } = Dimensions.get("window");
+import { Icon, IconName, Button, StepDots } from "../components";
+import { Spacing, FontWeight, ThemeColors, fontFamilyForWeight } from "../constants/Theme";
 
 const SLIDES: { icon: IconName; title: string; desc: string }[] = [
   {
@@ -28,68 +27,37 @@ const SLIDES: { icon: IconName; title: string; desc: string }[] = [
 export default function WelcomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const [index, setIndex] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+  const [slide, setSlide] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setIndex((prev) => {
-        const next = (prev + 1) % SLIDES.length;
-        scrollRef.current?.scrollTo({ x: next * SCREEN_W, animated: true });
-        return next;
-      });
+    timerRef.current = setInterval(() => {
+      setSlide((s) => (s + 1) % SLIDES.length);
     }, 4200);
-    return () => clearInterval(timer);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, []);
 
-  const onMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-    setIndex(newIndex);
-  };
-
-  const goToSlide = (i: number) => {
-    setIndex(i);
-    scrollRef.current?.scrollTo({ x: i * SCREEN_W, animated: true });
-  };
+  const active = SLIDES[slide];
+  const styles = makeStyles(colors);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onMomentumEnd}
-        style={styles.carousel}
-      >
-        {SLIDES.map((slide, i) => (
-          <View key={i} style={[styles.slide, { width: SCREEN_W }]}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.greenTint }]}>
-              <Icon name={slide.icon} size={40} color={colors.green} />
-            </View>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>{slide.title}</Text>
-            <Text style={[styles.desc, { color: colors.textSecondary }]}>{slide.desc}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      <View style={styles.dotsRow}>
-        {SLIDES.map((_, i) => (
-          <View
-            key={i}
-            onTouchEnd={() => goToSlide(i)}
-            style={[
-              styles.dot,
-              {
-                width: i === index ? 20 : 6,
-                backgroundColor: i === index ? colors.actionPrimary : colors.borderStrong,
-              },
-            ]}
-          />
-        ))}
+    <View style={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 }]}>
+      <View style={styles.center}>
+        <View style={styles.iconCircle}>
+          <Icon name={active.icon} size={40} color={colors.actionPrimary} />
+        </View>
+        <Text style={styles.title}>{active.title}</Text>
+        <Text style={styles.desc}>{active.desc}</Text>
       </View>
 
-      <View style={styles.actions}>
+      <View style={styles.dotsRow}>
+        <StepDots total={SLIDES.length} active={slide} />
+      </View>
+
+      <View style={styles.ctaCol}>
         <Button variant="primary" fullWidth onPress={() => router.push("/register")}>
           Registrarme
         </Button>
@@ -101,36 +69,49 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "space-between", paddingBottom: 40 },
-  carousel: { flexGrow: 0 },
-  slide: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-    paddingTop: 100,
-    paddingBottom: 40,
-    gap: 20,
-  },
-  iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: Type.h2.fontSize,
-    lineHeight: Type.h2.lineHeight,
-    fontWeight: Type.h2.fontWeight,
-    textAlign: "center",
-  },
-  desc: {
-    fontSize: Type.body.fontSize,
-    lineHeight: Type.body.lineHeight,
-    textAlign: "center",
-  },
-  dotsRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
-  dot: { height: 6, borderRadius: 999 },
-  actions: { paddingHorizontal: 24, gap: 8 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+      paddingHorizontal: 24,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 20,
+    },
+    iconCircle: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: c.greenTint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 26,
+      lineHeight: 32,
+      fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
+      letterSpacing: -0.5,
+      color: c.textPrimary,
+      textAlign: "center",
+    },
+    desc: {
+      maxWidth: 280,
+      fontSize: 14,
+      lineHeight: 22,
+      color: c.textSecondary,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
+      textAlign: "center",
+    },
+    dotsRow: {
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+    ctaCol: {
+      gap: Spacing.sm,
+    },
+  });

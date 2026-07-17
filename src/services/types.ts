@@ -17,6 +17,14 @@ export interface PerfilResponse {
   farmHa?: number | null;
 }
 
+// Las alertas críticas no son configurables: siempre se notifican.
+export interface PreferenciasResponse {
+  advertencias: boolean;
+  silencioNocturno: boolean;
+  silencioDesde?: string | null;
+  silencioHasta?: string | null;
+}
+
 export interface SiloResponse {
   id: number;
   name: string;

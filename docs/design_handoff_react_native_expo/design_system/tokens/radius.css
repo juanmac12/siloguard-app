@@ -1,0 +1,14 @@
+/* SiloGuard — Border-radius tokens
+   Source: Figma › Foundations › Radios de borde (node 135:90).
+   Controls (buttons, inputs) use md (8px); cards use lg/xl (12–16px);
+   badges & pills use full. */
+:root {
+  --radius-none: 0px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;    /* buttons, inputs                       */
+  --radius-lg: 12px;   /* cards, sheets                         */
+  --radius-xl: 16px;   /* large feature cards, status badges    */
+  --radius-2xl: 24px;  /* prominent containers                  */
+  --radius-full: 999px;/* pills, avatars, circular badges       */
+}

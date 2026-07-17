@@ -1,37 +1,43 @@
 /**
- * TutorialCard — card del walkthrough post-onboarding (spotlight sobre el dashboard).
- * Icono en círculo, título, descripción, AuthStepDots y botón de avance.
+ * TutorialCard — tarjeta flotante del overlay de tutorial (spotlight sobre
+ * el mini-dashboard): icono, título, descripción, dots de paso y CTA.
  */
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Radius, Shadows, ThemeColors } from '../constants/Theme';
+import { StyleSheet, Text, View } from 'react-native';
+import { Radius, Spacing, FontWeight, ThemeColors, fontFamilyForWeight, Shadows } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icon, IconName } from './Icon';
+import { StepDots } from './NavBar';
 import { Button } from './Button';
-import { AuthStepDots } from './AuthStepDots';
 
-type Props = {
+export function TutorialCard({
+  icon,
+  title,
+  desc,
+  step,
+  total,
+  buttonLabel = 'Siguiente',
+  onNext,
+}: {
   icon: IconName;
   title: string;
   desc: string;
   step: number;
   total: number;
-  buttonLabel: string;
+  buttonLabel?: string;
   onNext: () => void;
-};
-
-export function TutorialCard({ icon, title, desc, step, total, buttonLabel, onNext }: Props) {
+}) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.card}>
-      <View style={styles.iconCircle}>
-        <Icon name={icon} size={26} color={colors.green} />
+      <View style={styles.iconBox}>
+        <Icon name={icon} size={26} color={colors.actionPrimary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.desc}>{desc}</Text>
-      <AuthStepDots total={total} active={step} />
+      <StepDots total={total} active={step} />
       <Button variant="primary" fullWidth onPress={onNext}>
         {buttonLabel}
       </Button>
@@ -46,23 +52,34 @@ const makeStyles = (c: ThemeColors) =>
       borderWidth: 1,
       borderColor: c.borderDefault,
       borderRadius: Radius.lg,
+      padding: Spacing.lg,
       paddingTop: 24,
-      paddingHorizontal: 20,
-      paddingBottom: 20,
       alignItems: 'center',
-      gap: 14,
+      gap: Spacing.md,
       ...Shadows.lg,
     },
-    iconCircle: {
+    iconBox: {
       width: 56,
       height: 56,
-      borderRadius: 999,
+      borderRadius: 28,
       backgroundColor: c.greenTint,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    title: { fontSize: 19, fontWeight: '700', color: c.textPrimary, textAlign: 'center' },
-    desc: { fontSize: 14, lineHeight: 21, color: c.textSecondary, textAlign: 'center' },
+    title: {
+      fontSize: 19,
+      fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
+      color: c.textPrimary,
+      textAlign: 'center',
+    },
+    desc: {
+      fontSize: 14,
+      lineHeight: 21,
+      color: c.textSecondary,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
+      textAlign: 'center',
+    },
   });
 
 export default TutorialCard;

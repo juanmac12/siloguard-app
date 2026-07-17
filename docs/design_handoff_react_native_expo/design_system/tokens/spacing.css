@@ -1,0 +1,16 @@
+/* SiloGuard — Spacing tokens
+   Source: Figma › Foundations › Spacing · Base 8pt (node 135:72).
+   Strict 8pt grid (with a 4px half-step). Screen gutters are 24px;
+   stacked form fields sit on 16–24px rhythm. */
+:root {
+  --space-xs: 4px;    /* xs  — icon/text nudges, tight inline gaps          */
+  --space-sm: 8px;    /* sm  — inside chips, icon↔label                     */
+  --space-md: 16px;   /* md  — default element gap                          */
+  --space-lg: 24px;   /* lg  — screen gutter, section padding               */
+  --space-xl: 32px;   /* xl  — block separation                            */
+  --space-2xl: 48px;  /* 2xl — major section breaks                         */
+  --space-3xl: 64px;  /* 3xl — hero spacing                                */
+  --space-4xl: 96px;  /* 4xl — full-screen vertical centering              */
+
+  --screen-gutter: 24px;  /* canonical left/right padding on mobile screens */
+}

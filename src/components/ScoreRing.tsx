@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme } from '../contexts/ThemeContext';
+import { FontWeight, fontFamilyForWeight } from '../constants/Theme';
 
 export type ScoreTone = 'ok' | 'warn' | 'critical';
 
@@ -62,8 +63,8 @@ export function ScoreRing({ score, size = 52, stroke = 4, showLabel = false }: P
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
-  score: { fontWeight: '700', letterSpacing: -0.5 },
-  label: { fontWeight: '700', letterSpacing: 0.5, marginTop: 2 },
+  score: { fontWeight: '700', fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: -0.5 },
+  label: { fontWeight: '700', fontFamily: fontFamilyForWeight(FontWeight.bold), letterSpacing: 0.5, marginTop: 2 },
 });
 
 export default ScoreRing;

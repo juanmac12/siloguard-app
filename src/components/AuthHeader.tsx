@@ -1,49 +1,47 @@
 /**
- * AuthHeader — barra superior compartida del flujo de auth/onboarding.
- * Back-arrow opcional + título. Reemplaza los headers inline que cada
- * pantalla (register / verificar-email / vincular lanza) reimplementaba.
+ * AuthHeader — cabecera simple para pantallas de auth/onboarding:
+ * botón volver opcional + título.
  */
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Radius, Type, ThemeColors } from '../constants/Theme';
+import { FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icon } from './Icon';
 
-type Props = {
+export function AuthHeader({
+  title,
+  showBack = true,
+  onBack,
+}: {
   title: string;
   showBack?: boolean;
   onBack?: () => void;
-};
-
-export function AuthHeader({ title, showBack = true, onBack }: Props) {
+}) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { paddingTop: insets.top }]}>
       {showBack ? (
-        <Pressable
-          onPress={onBack}
-          accessibilityLabel="Volver"
-          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
-        >
+        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8} accessibilityLabel="Volver">
           <Icon name="chevron-left" size={22} color={colors.textPrimary} />
         </Pressable>
-      ) : null}
-      <Text style={[styles.title, showBack ? styles.titleWithBack : styles.titleNoBack]}>
+      ) : (
+        <View style={styles.backBtn} />
+      )}
+      <Text style={styles.title} numberOfLines={1}>
         {title}
       </Text>
     </View>
   );
 }
 
-const makeStyles = (c: ThemeColors, topInset: number) =>
+const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     bar: {
-      height: 54 + topInset,
-      paddingTop: topInset,
+      minHeight: 54,
       paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',
@@ -57,16 +55,15 @@ const makeStyles = (c: ThemeColors, topInset: number) =>
       height: 40,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: Radius.md,
     },
     title: {
+      flex: 1,
+      paddingLeft: 8,
+      fontSize: 18,
+      fontWeight: FontWeight.semibold,
+      fontFamily: fontFamilyForWeight(FontWeight.semibold),
       color: c.textPrimary,
-      fontSize: Type.h3.fontSize,
-      lineHeight: Type.h3.lineHeight,
-      fontWeight: Type.h3.fontWeight,
     },
-    titleWithBack: { paddingLeft: 8 },
-    titleNoBack: { paddingLeft: 12 },
   });
 
 export default AuthHeader;

@@ -13,16 +13,17 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+// Prototipo dark-first fijo: no hay toggle de tema expuesto en la UI.
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>("dark");
+  const [mode] = useState<ThemeMode>("dark");
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       mode,
       isDark: mode === "dark",
       colors: mode === "dark" ? DarkColors : LightColors,
-      toggle: () => setMode((m) => (m === "dark" ? "light" : "dark")),
-      setMode,
+      toggle: () => {},
+      setMode: () => {},
     }),
     [mode]
   );

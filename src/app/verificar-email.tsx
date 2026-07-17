@@ -1,100 +1,127 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { sendEmailVerification } from "firebase/auth";
-import { auth } from "../config/firebase";
+import { useAppData } from "../contexts/AppDataContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { Spacing, FontSize } from "../constants/Theme";
-import { Button, AuthHeader, Icon } from "../components";
+import { AuthHeader, Button, Icon } from "../components";
+import { FontWeight, ThemeColors, fontFamilyForWeight } from "../constants/Theme";
 
 const RESEND_COOLDOWN = 60;
 
 export default function VerificarEmailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { profile, completeOnboarding } = useAppData();
   const params = useLocalSearchParams<{ email?: string }>();
-  const email = params.email ?? auth.currentUser?.email ?? "tu correo";
-  const [cooldown, setCooldown] = useState(0);
-  const [checking, setChecking] = useState(false);
+  const styles = makeStyles(colors);
+
+  const email = params.email || profile.email || "tu@email.com";
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
+  const [resentMsg, setResentMsg] = useState(false);
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
+    const id = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
   }, [cooldown]);
 
-  const handleResend = async () => {
+  const resend = () => {
     if (cooldown > 0) return;
-    try {
-      if (auth.currentUser) await sendEmailVerification(auth.currentUser);
-      setCooldown(RESEND_COOLDOWN);
-    } catch {
-      Alert.alert("Error", "No pudimos reenviar el email. Intentá de nuevo en unos minutos.");
-    }
+    setCooldown(RESEND_COOLDOWN);
+    setResentMsg(true);
+    setTimeout(() => setResentMsg(false), 2500);
   };
 
-  const handleAlreadyVerified = async () => {
-    setChecking(true);
-    try {
-      await auth.currentUser?.reload();
-      if (auth.currentUser?.emailVerified) {
-        router.replace("/permisos");
-      } else {
-        Alert.alert("Todavía no", "No encontramos la verificación. Revisá tu bandeja de entrada y volvé a intentar.");
-      }
-    } finally {
-      setChecking(false);
-    }
+  const continuar = () => {
+    router.replace("/permisos");
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <AuthHeader title="Verificar email" showBack={false} />
-
-      <View style={styles.content}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.greenTint }]}>
-          <Icon name="mail" size={32} color={colors.green} />
+    <View style={styles.container}>
+      <AuthHeader title="Verificá tu email" showBack={false} />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.iconCircle}>
+          <Icon name="mail" size={36} color={colors.actionPrimary} />
         </View>
-
-        <Text style={[styles.heading, { color: colors.textPrimary }]}>Verificá tu email</Text>
-
-        <Text style={[styles.description, { color: colors.textSecondary }]}>
-          Te enviamos un enlace de verificación a{"\n"}
-          <Text style={[styles.emailBold, { color: colors.textPrimary }]}>{email}</Text>. Revisá tu bandeja de entrada.
+        <Text style={styles.title}>Verificá tu email</Text>
+        <Text style={styles.desc}>
+          Te enviamos un enlace de verificación a <Text style={styles.emailBold}>{email}</Text>. Revisá tu bandeja de entrada.
         </Text>
 
-        <Button variant="primary" fullWidth loading={checking} onPress={handleAlreadyVerified} style={styles.primaryBtn}>
-          Ya verifiqué
-        </Button>
+        <View style={styles.resendWrap}>
+          <Button variant="secondary" fullWidth disabled={cooldown > 0} onPress={resend}>
+            {cooldown > 0 ? `Reenviar en ${cooldown}s` : "Reenviar email"}
+          </Button>
+        </View>
+        {resentMsg ? <Text style={styles.resentMsg}>Email reenviado correctamente ✓</Text> : null}
 
-        <Button variant="ghost" fullWidth disabled={cooldown > 0} onPress={handleResend}>
-          {cooldown > 0 ? `Reenviar en ${cooldown}s` : "Reenviar email"}
-        </Button>
-
-        <Text style={[styles.hint, { color: colors.textMuted }]}>¿No lo encontrás? Revisá tu carpeta de spam.</Text>
+        <Text style={styles.spamHint}>¿No lo encontrás? Revisá tu carpeta de spam.</Text>
 
         <View style={styles.linksRow}>
-          <Text style={[styles.link, { color: colors.primary }]} onPress={() => router.replace("/register")}>
+          <Text style={styles.linkMuted} onPress={() => router.replace("/register")}>
             Cambiar email
           </Text>
-          <Text style={[styles.link, { color: colors.primary }]} onPress={() => Alert.alert("Contactanos", "Escribinos a soporte@siloguard.com")}>
+          <Text style={styles.linkUnderline} onPress={() => router.push("/contacto-tecnico")}>
             ¿Problemas? Contactanos
           </Text>
         </View>
-      </View>
+
+        <View style={styles.continueWrap}>
+          <Button
+            variant="primary"
+            fullWidth
+            onPress={() => {
+              completeOnboarding();
+              continuar();
+            }}
+          >
+            Ya verifiqué mi email
+          </Button>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: Spacing.lg, justifyContent: "center", alignItems: "center", gap: Spacing.md, marginTop: -40 },
-  iconCircle: { width: 80, height: 80, borderRadius: 999, justifyContent: "center", alignItems: "center", marginBottom: Spacing.sm },
-  heading: { fontSize: FontSize.headingXl, fontWeight: "700" },
-  description: { fontSize: FontSize.bodyMd, textAlign: "center", lineHeight: 22, marginBottom: Spacing.md },
-  emailBold: { fontWeight: "600" },
-  primaryBtn: { marginTop: Spacing.sm },
-  hint: { fontSize: FontSize.bodySm, marginTop: Spacing.sm },
-  linksRow: { flexDirection: "row", gap: Spacing.lg, marginTop: Spacing.md },
-  link: { fontSize: FontSize.bodySm, fontWeight: "600" },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    scroll: { padding: 24, paddingTop: 32, alignItems: "center" },
+    iconCircle: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: c.greenTint,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
+      color: c.textPrimary,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    desc: {
+      maxWidth: 280,
+      fontSize: 14,
+      lineHeight: 22,
+      color: c.textSecondary,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
+      textAlign: "center",
+    },
+    emailBold: {
+      color: c.textPrimary,
+      fontWeight: FontWeight.semibold,
+      fontFamily: fontFamilyForWeight(FontWeight.semibold),
+    },
+    resendWrap: { width: "100%", marginTop: 28 },
+    resentMsg: { fontSize: 12, color: c.statusOk, marginTop: 12, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    spamHint: { fontSize: 12, lineHeight: 18, color: c.textSecondary, marginTop: 20, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    linksRow: { flexDirection: "row", gap: 20, marginTop: 16 },
+    linkMuted: { fontSize: 12, color: c.textLink, fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    linkUnderline: { fontSize: 12, color: c.textSecondary, textDecorationLine: "underline", fontFamily: fontFamilyForWeight(FontWeight.regular) },
+    continueWrap: { width: "100%", marginTop: 32 },
+  });

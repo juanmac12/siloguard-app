@@ -4,7 +4,7 @@
  */
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Radius, FontWeight, ThemeColors } from '../constants/Theme';
+import { Radius, FontWeight, ThemeColors, fontFamilyForWeight } from '../constants/Theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 export type Tone = 'ok' | 'warn' | 'critical' | 'resolved' | 'info';
@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
+    fontFamily: fontFamilyForWeight(FontWeight.bold),
     letterSpacing: 0.4,
   },
 });

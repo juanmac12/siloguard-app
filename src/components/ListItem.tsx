@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors, Radius, Spacing, FontWeight } from '../constants/Theme';
+import { Colors, Radius, Spacing, FontWeight, fontFamilyForWeight } from '../constants/Theme';
 import { Icon } from './Icon';
 import { StatusDot, Tone } from './StatusBadge';
 
@@ -105,10 +105,12 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: 16,
     fontWeight: FontWeight.semibold,
+    fontFamily: fontFamilyForWeight(FontWeight.semibold),
   },
   subtitle: {
     color: Colors.textMuted,
     fontSize: 12,
+    fontFamily: fontFamilyForWeight(FontWeight.regular),
   },
   scoreCol: {
     flexDirection: 'row',
@@ -119,11 +121,13 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: 22,
     fontWeight: FontWeight.bold,
+    fontFamily: fontFamilyForWeight(FontWeight.bold),
     letterSpacing: -0.4,
   },
   scoreUnit: {
     color: Colors.textMuted,
     fontSize: 12,
+    fontFamily: fontFamilyForWeight(FontWeight.regular),
   },
 });
 

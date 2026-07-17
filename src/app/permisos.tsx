@@ -1,65 +1,91 @@
 import { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { AuthHeader, Button, Icon } from "../components";
 import { useTheme } from "../contexts/ThemeContext";
-import { Spacing, FontSize } from "../constants/Theme";
-import { Button, AuthHeader, Icon } from "../components";
+import { FontWeight, ThemeColors, fontFamilyForWeight } from "../constants/Theme";
 
 export default function PermisosScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const [requesting, setRequesting] = useState(false);
+  const styles = makeStyles(colors);
+  const [loading, setLoading] = useState(false);
 
-  // TODO: pedir permiso real de notificaciones (expo-notifications) cuando se integre push.
-  const handleActivate = () => {
-    setRequesting(true);
+  const goVincular = () => router.replace("/vincular-lanza");
+
+  const activar = () => {
+    if (loading) return;
+    setLoading(true);
     setTimeout(() => {
-      setRequesting(false);
-      router.replace({ pathname: "/agregar-silo", params: { onboarding: "1" } });
-    }, 600);
+      setLoading(false);
+      goVincular();
+    }, 800);
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={styles.container}>
       <AuthHeader title="Notificaciones" showBack={false} />
-
       <View style={styles.content}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.greenTint }]}>
-          <Icon name="bell" size={32} color={colors.green} />
+        <View style={styles.iconCircle}>
+          <Icon name="bell" size={36} color={colors.actionPrimary} />
         </View>
-
-        <Text style={[styles.heading, { color: colors.textPrimary }]}>Activá las notificaciones</Text>
-
-        <Text style={[styles.description, { color: colors.textSecondary }]}>
-          SiloGuard te avisa con al menos 48 hs de anticipación cuando un silo necesita atención.
+        <Text style={styles.title}>Activá las notificaciones</Text>
+        <Text style={styles.desc}>
+          SiloGuard te avisa con al menos 48 hs de anticipación cuando detecta un problema en tu grano. Sin
+          notificaciones, podrías perderte una alerta crítica.
         </Text>
 
-        <Button variant="primary" fullWidth loading={requesting} onPress={handleActivate} style={styles.primaryBtn}>
-          {requesting ? "Activando…" : "Activar notificaciones"}
-        </Button>
+        <View style={styles.spacer} />
 
-        <Text
-          style={[styles.link, { color: colors.primary }]}
-          onPress={() => router.replace({ pathname: "/agregar-silo", params: { onboarding: "1" } })}
-        >
+        <View style={styles.ctaWrap}>
+          <Button variant="primary" fullWidth disabled={loading} onPress={activar}>
+            {loading ? "Activando…" : "Activar notificaciones"}
+          </Button>
+        </View>
+        <Text style={styles.skip} onPress={goVincular}>
           Ahora no
-        </Text>
-
-        <Text style={[styles.hint, { color: colors.textMuted }]}>
-          Podés activarlas después desde Configuración.
         </Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: Spacing.lg, justifyContent: "center", alignItems: "center", gap: Spacing.md, marginTop: -40 },
-  iconCircle: { width: 80, height: 80, borderRadius: 999, justifyContent: "center", alignItems: "center", marginBottom: Spacing.sm },
-  heading: { fontSize: FontSize.headingXl, fontWeight: "700", textAlign: "center" },
-  description: { fontSize: FontSize.bodyMd, textAlign: "center", lineHeight: 22, marginBottom: Spacing.md },
-  primaryBtn: { marginTop: Spacing.sm },
-  link: { fontSize: FontSize.bodyMd, fontWeight: "600", marginTop: Spacing.md },
-  hint: { fontSize: FontSize.bodySm, marginTop: Spacing.sm, textAlign: "center" },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { flex: 1, padding: 24, paddingTop: 32, alignItems: "center" },
+    iconCircle: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: c.greenTint,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 24,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: FontWeight.bold,
+      fontFamily: fontFamilyForWeight(FontWeight.bold),
+      color: c.textPrimary,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    desc: {
+      maxWidth: 280,
+      fontSize: 14,
+      lineHeight: 22,
+      color: c.textSecondary,
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
+      textAlign: "center",
+    },
+    spacer: { flex: 1, minHeight: 16 },
+    ctaWrap: { width: "100%" },
+    skip: {
+      marginTop: 16,
+      fontSize: 12,
+      color: c.textSecondary,
+      textDecorationLine: "underline",
+      fontFamily: fontFamilyForWeight(FontWeight.regular),
+    },
+  });

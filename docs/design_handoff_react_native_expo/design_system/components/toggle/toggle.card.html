@@ -1,0 +1,58 @@
+<!-- @dsCard group="Components" viewport="700x220" name="Toggle" subtitle="On/off switch · md & sm · label positions · disabled" -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { margin: 0; background: var(--spec-bg); padding: 28px 24px; }
+  .grid { display: flex; flex-direction: column; gap: 22px; }
+  .row  { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .cap  { width: 80px; flex-shrink: 0; font-family: var(--font-sans); font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .sep  { width: 1px; height: 22px; background: var(--border-default); flex-shrink: 0; }
+</style>
+</head>
+<body>
+  <div id="root" class="grid"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { Toggle } = window.SiloGuardDesignSystem_633342;
+
+    function Demo() {
+      const [a, setA] = React.useState(true);
+      const [b, setB] = React.useState(false);
+      const [c, setC] = React.useState(true);
+      const [d, setD] = React.useState(false);
+      const [e, setE] = React.useState(true);
+      const [f, setF] = React.useState(false);
+
+      return (
+        <>
+          <div className="row">
+            <span className="cap">md</span>
+            <Toggle checked={a} onChange={setA} />
+            <Toggle checked={b} onChange={setB} />
+            <div className="sep" />
+            <Toggle checked={c} onChange={setC} label="Monitoreo activo" />
+            <Toggle checked={d} onChange={setD} label="Notificaciones" />
+            <div className="sep" />
+            <Toggle checked={true} onChange={() => {}} label="Desactivado" disabled />
+          </div>
+          <div className="row">
+            <span className="cap">sm / pos</span>
+            <Toggle checked={e} onChange={setE} size="sm" />
+            <Toggle checked={f} onChange={setF} size="sm" />
+            <div className="sep" />
+            <Toggle checked={true} onChange={() => {}} size="sm" label="Modo silencioso" />
+            <Toggle checked={true} onChange={() => {}} label="Alertas email" labelPosition="left" />
+          </div>
+        </>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  </script>
+</body>
+</html>
