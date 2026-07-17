@@ -132,12 +132,40 @@ Las migraciones y el seeder se aplican **solos al arrancar** en Development
 
 ### 5. Configurar la URL de la API en la app
 
-La app apunta al backend por IP de LAN. Editá [src/config/api.ts](src/config/api.ts):
+La app apunta al backend por IP de LAN, no por `localhost` (el celular no comparte
+`localhost` con la compu). Conseguí tu IP actual:
+
+```bash
+hostname -I    # Linux — tomá la IP de tu interfaz Wi-Fi (la primera suele ser esa)
+```
+
+Y editá [src/config/api.ts](src/config/api.ts) con ese valor:
 
 ```ts
 // IP LAN de la compu que corre el backend. Si cambia de red/IP, actualizar acá.
 export const API_BASE_URL = "http://<TU_IP_LAN>:5210/api";
 ```
+
+**Si cambiás de red Wi-Fi, tu IP cambia y tenés que repetir este paso** — si no, la app
+muestra `"No se pudo conectar al servidor..."` aunque el backend esté corriendo.
+
+---
+
+## Credenciales de prueba
+
+El seeder (`DbSeeder`, corre solo en `Development`, automático al arrancar el backend)
+crea estos usuarios para poder probar la app sin registrarte:
+
+| Email | Contraseña | Rol |
+|---|---|---|
+| `dev@siloguard.com` | `Demo1234` | Productor |
+| `admin@siloguard.com` | `Admin1234` | Productor + Admin |
+
+No hace falta configurar Firebase para poder loguearte con estos usuarios: si
+`Firebase:CredentialsPath` no apunta a un archivo válido, el backend **omite** el chequeo
+de email verificado (`FirebaseAuthService`, con warning en el log) en vez de bloquear el
+login. `dev@siloguard.com` además está explícitamente en `VerificationBypassEmails`
+(`appsettings.Development.json`).
 
 ---
 
