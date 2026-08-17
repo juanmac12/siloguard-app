@@ -1,9 +1,10 @@
 import { router } from "expo-router";
 import { clearToken, getToken } from "../services/tokenStorage";
 
-// IP LAN de la compu que corre el backend (dotnet run --project backend/src/SiloGuard.Api
-// --urls "http://0.0.0.0:5210"). Si cambia de red/IP, actualizar acá.
-export const API_BASE_URL = "http://192.168.0.9:5210/api";
+// Backend deployado en Render (Dockerfile en backend/, Postgres gestionado).
+// Para volver a apuntar al backend local (dotnet run --project backend/src/SiloGuard.Api
+// --urls "http://0.0.0.0:5210"), reemplazar por "http://<IP LAN de la compu>:5210/api".
+export const API_BASE_URL = "https://siloguard-app.onrender.com/api";
 
 export class ApiError extends Error {
   statusCode: number;
