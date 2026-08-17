@@ -1,4 +1,5 @@
 using SiloGuard.Business.Dtos.Auth;
+using SiloGuard.Business.Dtos.Lecturas;
 using SiloGuard.Business.Dtos.Lotes;
 using SiloGuard.Business.Dtos.Perfil;
 using SiloGuard.Business.Dtos.Silos;
@@ -83,6 +84,21 @@ public class ValidatorTests
         });
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Lectura_AceptaValoresPlausiblesYRechazaValoresAbsurdos()
+    {
+        // Rango deliberadamente amplio (rubrica 2.2): valores "fuera de rango real" como
+        // 999°C pasan esta validacion y quedan para que el check constraint de la base
+        // los rechace con 409 — solo valores imposibles (overflow) se cortan aca.
+        var validator = new LecturaCreateRequestValidator();
+
+        var plausible = validator.Validate(new LecturaCreateRequest { Co2 = 620, Temp = 26.5m, Hum = 14.2m });
+        Assert.True(plausible.IsValid);
+
+        var absurdo = validator.Validate(new LecturaCreateRequest { Co2 = -5000, Temp = -9999, Hum = 9999 });
+        Assert.False(absurdo.IsValid);
     }
 
     [Fact]

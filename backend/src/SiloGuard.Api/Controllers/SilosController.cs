@@ -4,6 +4,7 @@ using SiloGuard.Api.DTOs.Common;
 using SiloGuard.Api.DTOs.Lecturas;
 using SiloGuard.Api.DTOs.Silos;
 using SiloGuard.Api.Extensions;
+using SiloGuard.Business.Dtos.Lecturas;
 using SiloGuard.Business.Dtos.Silos;
 using SiloGuard.Business.Services;
 using SiloGuard.Data.Entities;
@@ -77,6 +78,20 @@ public class SilosController : ControllerBase
             PageSize = result.PageSize,
             TotalCount = result.TotalCount,
             TotalPages = result.TotalPages,
+        });
+    }
+
+    [HttpPost("{id:int}/lecturas")]
+    public async Task<ActionResult<LecturaResponse>> AddLectura(
+        int id, [FromBody] LecturaCreateRequest request, CancellationToken ct)
+    {
+        var reading = await _lecturaService.AddAsync(User.GetUserId(), id, request, ct);
+        return CreatedAtAction(nameof(Lecturas), new { id }, new LecturaResponse
+        {
+            Timestamp = reading.Timestamp,
+            Co2 = reading.Co2,
+            Temp = reading.Temp,
+            Hum = reading.Hum,
         });
     }
 

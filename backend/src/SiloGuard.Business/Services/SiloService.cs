@@ -110,7 +110,7 @@ public class SiloService : ISiloService
         return silo;
     }
 
-    private static string ComputeStatus(decimal temp, decimal hum, decimal co2)
+    internal static string ComputeStatus(decimal temp, decimal hum, decimal co2)
     {
         if (temp > 35 || co2 > 800) return "critical";
         if (temp > 27 || hum > 16 || co2 > 550) return "warn";
