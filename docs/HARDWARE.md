@@ -47,15 +47,23 @@ falta tocar el modelo de datos:
 - El nodo va a necesitar autenticarse (JWT) o, si se define un flujo de dispositivo aparte,
   eso es una decisión de diseño pendiente (ver sección siguiente).
 
-## Pendiente de definir (antes de cablear)
+## Firmware — resuelto (2026-08-17)
 
-- [ ] Cómo se autentica el ESP32 contra la API (¿JWT de un usuario técnico fijo? ¿un endpoint
-      de ingesta sin auth pensado para dispositivos?).
-- [ ] Frecuencia de muestreo y de POST a la API (evitar floodear el free tier de Render).
-- [ ] Wiring definitivo: pines del ESP32 para MH-Z19C (UART), DS18B20 (OneWire), DHT22
-      (digital) — pendiente de diagramar.
+El firmware del nodo ESP32 vive en [`firmware/siloguard_node/`](../firmware/siloguard_node/)
+(ver [`firmware/README.md`](../firmware/README.md) para instalación, wiring propuesto y
+decisiones de diseño). Se agregó el endpoint que faltaba en el backend —
+`POST /api/silos/{id}/lecturas`— porque antes solo existía la lectura inicial al crear el
+silo; verificado end-to-end contra Render (login → POST lectura → 201 → `Silo.Status`/`Last*`
+actualizados → rollback 409 ante valores fuera de rango).
+
+## Pendiente
+
+- [ ] Armar el wiring físico (protoboard) — la guía de pines está en `firmware/README.md`,
+      todavía no está cableado.
+- [ ] Ajustar `WIFI_SSID`/`WIFI_PASSWORD`/`API_EMAIL`/`API_PASSWORD`/`SILO_ID` en el sketch
+      antes de flashear.
 - [ ] Si se arma un caso/gabinete o queda todo en protoboard para la demo.
 
 **Estado del proyecto en general:** la parte de software (`backend/` + `src/`) está terminada,
-buildeada, testeada (12/12 tests) y deployada en Render — verificado el 2026-08-17. A partir
-de acá el trabajo es exclusivamente de hardware/firmware.
+buildeada, testeada (13/13 tests) y deployada en Render — verificado el 2026-08-17. El
+firmware del ESP32 ya está escrito y probado contra la API real; falta el armado físico.
