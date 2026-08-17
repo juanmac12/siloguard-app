@@ -9,6 +9,16 @@ using SiloGuard.Data.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Railway (y hosts similares) asignan el puerto público por variable de entorno PORT.
+// launchSettings.json solo aplica a `dotnet run` local; en el contenedor productivo
+// (ENTRYPOINT del Dockerfile, sin perfiles) hay que leerlo a mano y decirle a Kestrel
+// dónde escuchar. Si PORT no está seteada (dev local, docker-compose), no se toca nada.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
@@ -46,12 +56,16 @@ var app = builder.Build();
 // Primer middleware del pipeline: envuelve cualquier excepcion de las capas inferiores.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+// Swagger queda expuesto en todos los entornos (no solo Development): la rúbrica
+// del TP pide poder mostrarlo como evidencia contra el deploy público.
+app.UseSwagger();
+app.UseSwaggerUI();
 
-    using var scope = app.Services.CreateScope();
+// Migraciones y seed corren siempre (no solo en Development): en un deploy nuevo
+// (Railway) la base gestionada arranca vacía y necesita el esquema antes del primer
+// request. DbSeeder es idempotente (chequea si ya hay usuarios antes de insertar).
+using (var scope = app.Services.CreateScope())
+{
     var db = scope.ServiceProvider.GetRequiredService<SiloGuardDbContext>();
     await db.Database.MigrateAsync();
     await DbSeeder.SeedAsync(db);

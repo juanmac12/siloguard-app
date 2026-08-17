@@ -73,14 +73,28 @@ public static class ServiceCollectionExtensions
         services.Configure<FirebaseSettings>(configuration.GetSection("Firebase"));
         var settings = configuration.GetSection("Firebase").Get<FirebaseSettings>() ?? new FirebaseSettings();
 
-        if (FirebaseApp.DefaultInstance is null
-            && !string.IsNullOrWhiteSpace(settings.CredentialsPath)
-            && File.Exists(settings.CredentialsPath))
+        if (FirebaseApp.DefaultInstance is null)
         {
-            var credential = CredentialFactory.FromFile<ServiceAccountCredential>(settings.CredentialsPath)
-                .ToGoogleCredential();
+            // Prioridad: JSON crudo por variable de entorno (Firebase__CredentialsJson) —
+            // necesario en hosting sin filesystem persistente entre deploys (Railway).
+            // Si no está seteado, cae al archivo en disco (flujo de desarrollo local).
+            GoogleCredential? credential = null;
 
-            FirebaseApp.Create(new AppOptions { Credential = credential });
+            if (!string.IsNullOrWhiteSpace(settings.CredentialsJson))
+            {
+                credential = CredentialFactory.FromJson<ServiceAccountCredential>(settings.CredentialsJson)
+                    .ToGoogleCredential();
+            }
+            else if (!string.IsNullOrWhiteSpace(settings.CredentialsPath) && File.Exists(settings.CredentialsPath))
+            {
+                credential = CredentialFactory.FromFile<ServiceAccountCredential>(settings.CredentialsPath)
+                    .ToGoogleCredential();
+            }
+
+            if (credential is not null)
+            {
+                FirebaseApp.Create(new AppOptions { Credential = credential });
+            }
         }
 
         services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
