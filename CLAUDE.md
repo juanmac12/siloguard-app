@@ -27,7 +27,8 @@ Documentación de referencia (leerla antes de tocar algo grande):
 |---|---|
 | `ARQUITECTURA.md` | Guía del Design System (tokens, componentes, íconos permitidos) y estado del backend. |
 | `backend/README.md` | Arquitectura de las 3 capas, modelo de datos, instalación/ejecución del backend. |
-| `docs/DEFENSA.md` | Guía de estudio para la defensa: checklist de pruebas, los 8 conceptos de la rúbrica mapeados a archivos reales, endpoints, preguntas típicas con respuesta. |
+| `docs/CHECKLIST-DEFENSA.md` | **La guía de defensa vigente** (llegó con la sincronización del 2026-08-17): 14 tablas, 30 endpoints, mapeo completo rúbrica→código, preguntas reales del profesor a otros grupos. |
+| `docs/DEFENSA.md` | Guía de estudio anterior (recuperada de un `.html` suelto) — cubre un estado más viejo del backend (8 conceptos, sin Umbrales/Soporte/Preferencias). Preferir `CHECKLIST-DEFENSA.md`. |
 | `docs/HISTORIAL-CLAUDE.md` | Contenido histórico (2026-07-03) de un `CLAUDE.md` anterior — notas de equipo desactualizadas, solo como referencia arqueológica. |
 | `docs/PLAN-DE-PRUEBAS.md` / `docs/PRUEBAS-ENTREGA.md` | Checklists de pruebas funcionales end-to-end. |
 | `BACKLOG.md` | **Desactualizado** — lista pantallas "por desarrollar" que ya están implementadas. No confiar en su estado. |
@@ -47,9 +48,12 @@ Documentación de referencia (leerla antes de tocar algo grande):
 3. **No inventes variables CSS ni nombres de íconos.** Antes de escribir `var(--algo)`,
    consultá `src/design-system/tokens/semantic.css`. Los íconos disponibles están en
    `src/components/Icon.tsx` (`IconName`) — no agregues una librería de íconos externa.
-4. **`API_BASE_URL` en `src/config/api.ts` es una IP LAN hardcodeada.** Si el backend no
-   responde desde el celular, lo primero a revisar es que esa IP coincida con la de la máquina
-   que corre `dotnet run` y que ambos estén en la misma red.
+4. **`API_BASE_URL` en `src/config/api.ts` apunta al backend deployado en Render**
+   (`https://siloguard-app.onrender.com/api`), no a una IP local. Si necesitás probar contra
+   un backend corriendo en tu máquina, reemplazá el valor por la IP LAN de la compu — pero
+   acordate de revertirlo antes de commitear, o vas a romper el deploy para cualquiera que
+   clone el repo. El free tier de Render duerme tras inactividad: la primera request después
+   de un rato puede tardar 30-60s.
 5. **Antes de tocar un endpoint, mirá si tiene un `Validator` en `SiloGuard.Business/Validators/`.**
    El `ValidationFilter` corre automáticamente cualquier `IValidator<T>` registrado — no hace
    falta (ni conviene) validar a mano dentro del controller.
@@ -60,18 +64,28 @@ Documentación de referencia (leerla antes de tocar algo grande):
 
 ## Cómo levantar el proyecto
 
+**Backend:** deployado en Render (`https://siloguard-app.onrender.com`, Dockerfile en
+`backend/`, Postgres gestionado). La app ya apunta ahí por default — para probarla en el
+celular alcanza con levantar solo el frontend:
+
 ```bash
-# Backend + DB
+npx expo start -c
+```
+
+Swagger del deploy: `https://siloguard-app.onrender.com/swagger`. Usuario demo (sembrado por
+`DbSeeder`, corre siempre al arrancar, es idempotente): `dev@siloguard.com` / `Demo1234` — 6
+silos, ~1000 lecturas, 5 alertas, 2 lotes.
+
+**Backend local** (solo si estás desarrollando algo del backend en sí):
+
+```bash
 cd backend
 docker compose up -d db
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/SiloGuard.Api --urls "http://0.0.0.0:5210"
-
-# App (otra terminal, en la raíz del repo)
-npx expo start --go -c
 ```
 
-Usuario demo (sembrado por `DbSeeder`): `dev@siloguard.com` / `Demo1234` — 6 silos, ~1000
-lecturas, 5 alertas, 2 lotes. Swagger en `http://localhost:5210/swagger`.
+Con esto corriendo, cambiá `API_BASE_URL` en `src/config/api.ts` a la IP LAN de tu máquina
+(sin commitear ese cambio) para que la app le hable a tu backend local en vez del de Render.
 
 ---
 

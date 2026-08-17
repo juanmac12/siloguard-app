@@ -216,7 +216,26 @@ backend/
 `SiloGuard.Data.Abstractions`) pero nunca importa EF Core directamente. `SiloGuard.Api`
 referencia ambas.
 
-### Cómo levantarlo
+### Deploy (2026-08-17)
+
+Backend deployado en **Render**: `https://siloguard-app.onrender.com`, Postgres gestionado
+(plan free), build vía `backend/Dockerfile` (multi-stage: SDK 10 para publicar, `aspnet:10.0`
+como runtime). `src/config/api.ts` del frontend apunta ahí por default — no hace falta
+levantar nada local para probar la app.
+
+Detalles del setup de producción, distintos del dev local:
+- Swagger y las migraciones/seed **no** están atados a `IsDevelopment()` — corren siempre,
+  para que un deploy nuevo arranque con esquema y datos aunque `ASPNETCORE_ENVIRONMENT` sea
+  `Production`.
+- Kestrel escucha en la variable `PORT` que asigna Render (no en un puerto fijo).
+- `AddFirebaseAuth` acepta el service account como JSON crudo por env var
+  (`Firebase:CredentialsJson`), no solo por archivo en disco — Render no tiene filesystem
+  persistente entre deploys.
+- Env var `DOTNET_hostBuilder__reloadConfigOnChange=false` — sin esto, el contenedor de
+  Render (límite bajo de `inotify`) crashea al intentar vigilar `appsettings.json` para
+  recarga en caliente.
+
+### Cómo levantarlo en local (solo si estás tocando el backend)
 
 ```bash
 cd SiloGuard/backend
@@ -225,8 +244,8 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/SiloGuard.Api --urls
 ```
 
 Puerto fijo: `5210`, escuchando en `0.0.0.0` para que el celular con Expo Go llegue por LAN
-(`http://192.168.0.9:5210/api`, configurado en `src/config/api.ts` del frontend — actualizar
-esa constante si cambia la IP de la compu).
+(hay que cambiar `API_BASE_URL` en `src/config/api.ts` a la IP de la compu — sin commitear
+ese cambio, ya que rompería el deploy para cualquiera que clone el repo).
 
 ### Frontend — qué cambió
 

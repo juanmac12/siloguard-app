@@ -6,22 +6,32 @@
 
 ## 0. Preparación del entorno
 
+El backend ya está deployado en Render (`https://siloguard-app.onrender.com`) y
+`src/config/api.ts` apunta ahí por default — **no hace falta levantar nada local** para
+correr este plan de pruebas, solo la app:
+
+```bash
+cd SiloGuard
+npx expo start -c
+```
+
+- [ ] La API responde en `https://siloguard-app.onrender.com/swagger` (puede tardar 30-60s
+      la primera vez si el servicio estaba dormido — free tier de Render).
+- [ ] El celular puede estar en cualquier red (Wi-Fi o datos) — ya no depende de estar en la
+      misma LAN que ninguna compu.
+
+<details>
+<summary>Alternativa: probar contra un backend local (solo si estás desarrollando el backend)</summary>
+
 ```bash
 cd SiloGuard/backend
 docker compose up -d db
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/SiloGuard.Api --urls "http://0.0.0.0:5210"
 ```
 
-En otra terminal:
-
-```bash
-cd SiloGuard
-npx expo start --go -c
-```
-
-- [ ] La API responde en `http://localhost:5210/swagger` (Swagger UI carga en el navegador).
-- [ ] El celular está en la **misma red Wi-Fi** que la compu, y `src/config/api.ts`
-      apunta a la IP correcta de la compu (`ip addr` → hoy `192.168.0.9`).
+Cambiá `API_BASE_URL` en `src/config/api.ts` a la IP LAN de la compu (`ip addr`), sin
+commitear ese cambio, y el celular sí tiene que estar en la misma Wi-Fi.
+</details>
 
 **Usuario demo (seeder):** `dev@siloguard.com` / `Demo1234` — trae 6 silos, ~1000 lecturas y 5 alertas.
 
